@@ -1,0 +1,50 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Document</title>
+    </head>
+
+    <body>
+        <label for="articleTitle">Post Title:</label>
+        <input type="text" id="articleTitle" name="title"> <br>
+        <label for="articleDescription">Description:</label>
+        <input type="text" id="articleDescription" name="description"> <br>
+        <label for="articleTags">Tags:</label>
+        <input type="text" id="articleTags" name="tags"> <br>
+        <label for="fileinput">File:</label>
+        <input type="file" id="fileinput" name="filename"> <br>
+        <input type="submit" id="btnSubmit">
+        <script>
+            // Select your input type file and store it in a variable
+            const FileInput = document.getElementById('fileinput');
+            const TitleInput = document.getElementById('articleTitle');
+            const DescriptionInput = document.getElementById('articleDescription');
+            const TagsInput = document.getElementById('articleTags');
+            const btnSumbit = document.getElementById('btnSubmit');
+
+            // This will upload the file after having read it
+            const upload = (file) => {
+            var formdata= new FormData();
+            formdata.append("userfile", file);
+            formdata.append("title", TitleInput.value);
+            formdata.append("tags", TagsInput.value);
+            console.log(TagsInput.value);
+            fetch('http://127.0.0.1:8080/upload', { // Your POST endpoint
+                method: 'POST',
+                body: formdata
+            }).then(
+                success => console.log(success) // Handle the success response object
+            ).catch(
+                error => console.log(error) // Handle the error response object
+            );
+            };
+    
+            // Event handler executed when a file is selected
+            const onSubmitPost = () => upload(FileInput.files[0]);
+            btnSumbit.addEventListener('click', onSubmitPost, false);
+        </script>
+    </body>
+    </html>
