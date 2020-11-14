@@ -1,6 +1,6 @@
 
-    <!DOCTYPE html>
-    <html lang="en">
+<!DOCTYPE html>
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,15 +31,15 @@
             formdata.append("userfile", file);
             formdata.append("title", TitleInput.value);
             formdata.append("tags", TagsInput.value);
-            console.log(TagsInput.value);
-            fetch('http://127.0.0.1:8080/upload', { // Your POST endpoint
+            formdata.append("description", DescriptionInput.value);
+            fetch('http://127.0.0.1:8080/upload', { //POST endpoint
                 method: 'POST',
                 body: formdata
-            }).then(
-                success => console.log(success) // Handle the success response object
-            ).catch(
-                error => console.log(error) // Handle the error response object
-            );
+                }).then(
+                    success => console.log(success) // Handle the success response object
+                ).catch(
+                    error => console.log(error) // Handle the error response object
+                );
             };
     
             // Event handler executed when a file is selected
@@ -47,4 +47,4 @@
             btnSumbit.addEventListener('click', onSubmitPost, false);
         </script>
     </body>
-    </html>
+</html>

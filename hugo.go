@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"io"
 	"io/ioutil"
+	"log"
 	"os/exec"
 	"path"
 	"strings"
@@ -16,23 +19,27 @@ import (
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-//GetDocContent takes reader assumed
-//to read the content of a .docx document
-//converts the content to CommonMark Markdown,
-//and returns it as a byte slice
+var PandocLoc = "pandoc"
+
+//GetDocContent takes path to file assumed to be
+//a docx file to be converted to commonmark via
+//pandoc
 func getDocContent(c io.Reader) ([]byte, error) {
-	cmd := exec.Command("pandoc")
+	outbuf := new(bytes.Buffer)
+	cmd := exec.Command(PandocLoc, "-f", "docx", "-t", "commonmark", "-o", "-")
+	log.Println(cmd.String())
 	cmd.Stdin = c
-	cmd.Args = []string{"-f", "docx", "-t", "commonmark"}
+	cmd.Stdout = outbuf
 	err := cmd.Run()
 	if err != nil {
+		switch e := err.(type) {
+		case *exec.ExitError:
+			//pandoc outputs error messages to stdout - not stderr
+			err = fmt.Errorf("%s: %s", e.Error(), outbuf.String())
+		}
 		return nil, err
 	}
-	b, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
+	return outbuf.Bytes(), nil
 }
 
 type frontMatter struct {
@@ -82,41 +89,29 @@ func (p *post) Bytes() ([]byte, error) {
 }
 
 type HugoRepo struct {
-	path string
-	repo *git.Repository
-	auth *githttp.BasicAuth
-	cancel context.CancelFunc
-	c <-chan error
+	path   string
+	repo   *git.Repository
+	auth   *githttp.BasicAuth
+	name   string
+	email  string
 	onDeck string
+	test bool
 }
 
-func (h *HugoRepo) StartServer(ctx context.Context) (chan error, error) {
-	ctx, h.cancel = context.WithCancel(ctx)
+func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (chan error, error) {
 	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true")
 	cmd.Dir = h.path
 	err := cmd.Start()
 	if err != nil {
 		return nil, err
 	}
-	c := make(chan error, 0)
-	go func(){
-		c <- cmd.Wait();
+	c := make(chan error, 1)
+	go func() {
+		c <- cmd.Wait()
+		log.Println("hugo server stopped")
+		close(stopped)
 	}()
 	return c, nil
-}
-
-func (h *HugoRepo) StopServer() error {
-	if h.cancel == nil {
-		return nil
-	}
-	h.cancel()
-	err := <-h.c
-
-	//cleanup
-	h.cancel = nil
-	h.c = nil
-
-	return err
 }
 
 func NewHugoRepo(path string, username, token string) (*HugoRepo, error) {
@@ -125,39 +120,39 @@ func NewHugoRepo(path string, username, token string) (*HugoRepo, error) {
 		return nil, err
 	}
 	return &HugoRepo{
-		path:path,
-		repo:repo,
-		auth:&githttp.BasicAuth{
-			Username:username,
-			Password:token,
+		path: path,
+		repo: repo,
+		auth: &githttp.BasicAuth{
+			Username: username,
+			Password: token,
 		},
 	}, nil
 }
 
-func (h *HugoRepo) New(c io.Reader, title, tags string, description string, author string) error {
+func (h *HugoRepo) New(c io.Reader, title, tags, description, author string) error {
 	//reset in case there are any lingering changes
 	err := h.Abort()
 	if err != nil {
-		return err
+		return errors.New("abort: " + err.Error())
 	}
 
 	//get work tree
 	wt, err := h.repo.Worktree()
 	if err != nil {
-		return err
+		return errors.New("worktree: " + err.Error())
 	}
 
 	//create post file
 	post, err := newPost(c, title, tags, description, author)
 	if err != nil {
-		return err
+		return errors.New("newPost: " + err.Error())
 	}
 	mdname := strings.ReplaceAll(strings.ToLower(post.frontMatter.Title), " ", "-")
 	//set file name as
 	fname := "content/post/" + mdname + ".md"
 	b, err := post.Bytes()
 	if err != nil {
-		return err
+		return errors.New("PostBytes: " + err.Error())
 	}
 	err = ioutil.WriteFile(path.Join(h.path, fname), b, 0644)
 	if err != nil {
@@ -170,12 +165,12 @@ func (h *HugoRepo) New(c io.Reader, title, tags string, description string, auth
 		return err
 	}
 
-	h.onDeck = mdname;
+	h.onDeck = mdname
 
 	return nil
 }
 
-func (h *HugoRepo) Deploy() error{
+func (h *HugoRepo) Deploy() error {
 	wt, err := h.repo.Worktree()
 	if err != nil {
 		return err
@@ -190,21 +185,24 @@ func (h *HugoRepo) Deploy() error{
 		return errors.New("index is clean")
 	}
 
-	//add commit (what should message be?)
+	//add commit
 	if len(h.onDeck) == 0 {
 		return errors.New("went to commit but onDeck is empty")
 	}
-	_ , err = wt.Commit("publish " + h.onDeck, &git.CommitOptions{
-		Author:    &object.Signature{
-			Name:  "kitten",
-			Email: "kitten@smalltownkitten.com",
+	_, err = wt.Commit("publish "+h.onDeck, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  h.name,
+			Email: h.email,
 		},
 	})
 
 	//push to remote
-	return h.repo.PushContext(context.TODO(), &git.PushOptions{
-		Auth:       h.auth,
-	})
+	if !h.test {
+		return h.repo.PushContext(context.TODO(), &git.PushOptions{
+			Auth: h.auth,
+		})
+	}
+	return nil
 }
 
 func (h *HugoRepo) Abort() error {
@@ -219,6 +217,6 @@ func (h *HugoRepo) Abort() error {
 	}
 	return wt.Reset(&git.ResetOptions{
 		Commit: head.Hash(),
-		Mode: git.HardReset,
+		Mode:   git.HardReset,
 	})
 }
