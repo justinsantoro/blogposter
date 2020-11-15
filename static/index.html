@@ -10,8 +10,8 @@
     <body>
         <label for="articleTitle">Post Title:</label>
         <input type="text" id="articleTitle" name="title"> <br>
-        <label for="articleDescription">Description:</label>
-        <input type="text" id="articleDescription" name="description"> <br>
+        <label for="articleDescription">Summary:</label>
+        <input type="text" id="articleSummary" name="summary"> <br>
         <label for="articleTags">Tags:</label>
         <input type="text" id="articleTags" name="tags"> <br>
         <label for="fileinput">File:</label>
@@ -21,7 +21,7 @@
             // Select your input type file and store it in a variable
             const FileInput = document.getElementById('fileinput');
             const TitleInput = document.getElementById('articleTitle');
-            const DescriptionInput = document.getElementById('articleDescription');
+            const SummaryInput = document.getElementById('articleSummary');
             const TagsInput = document.getElementById('articleTags');
             const btnSumbit = document.getElementById('btnSubmit');
 
@@ -31,7 +31,7 @@
             formdata.append("userfile", file);
             formdata.append("title", TitleInput.value);
             formdata.append("tags", TagsInput.value);
-            formdata.append("description", DescriptionInput.value);
+            formdata.append("summary", SummaryInput.value);
             fetch('http://127.0.0.1:8080/upload', { //POST endpoint
                 method: 'POST',
                 body: formdata

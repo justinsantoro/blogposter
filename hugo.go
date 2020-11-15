@@ -46,7 +46,7 @@ type frontMatter struct {
 	Title       string    `json:"title"`
 	Author      string    `json:"author,omitempty"`
 	Date        time.Time `json:"date"`
-	Description string    `json:"description,omitempty"`
+	Summary string    `json:"summary,omitempty"`
 	Tags        []string  `json:"tags"`
 }
 
@@ -61,7 +61,7 @@ type post struct {
 }
 
 //newPost returns a post
-func newPost(c io.Reader, title, tags string, description string, author string) (*post, error) {
+func newPost(c io.Reader, title, tags string, summary string, author string) (*post, error) {
 	doc, err := getDocContent(c)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func newPost(c io.Reader, title, tags string, description string, author string)
 			Title:       title,
 			Author:      author,
 			Date:        time.Now(),
-			Description: description,
+			Summary: summary,
 			Tags:        strings.Split(tags, " "),
 		},
 	}, nil
@@ -129,7 +129,7 @@ func NewHugoRepo(path string, username, token string) (*HugoRepo, error) {
 	}, nil
 }
 
-func (h *HugoRepo) New(c io.Reader, title, tags, description, author string) error {
+func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 	//reset in case there are any lingering changes
 	err := h.Abort()
 	if err != nil {
@@ -143,7 +143,7 @@ func (h *HugoRepo) New(c io.Reader, title, tags, description, author string) err
 	}
 
 	//create post file
-	post, err := newPost(c, title, tags, description, author)
+	post, err := newPost(c, title, tags, summary, author)
 	if err != nil {
 		return errors.New("newPost: " + err.Error())
 	}

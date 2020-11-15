@@ -119,10 +119,10 @@ func (s *server) startHttpServer(port string) {
 		//get front matter from form
 		title := strings.TrimSpace(req.FormValue("title"))
 		tags := strings.ToLower(strings.TrimSpace(req.FormValue("tags")))
-		description := strings.TrimSpace(req.FormValue("description"))
+		summary := strings.TrimSpace(req.FormValue("summary"))
 
 		//create post in repo
-		if !success("hugo new", s.hugo.New(file, title, tags, description, s.config.Author)) {
+		if !success("hugo new", s.hugo.New(file, title, tags, summary, s.config.Author)) {
 			return
 		}
 		w.Header().Add("content-type", "text/html")
