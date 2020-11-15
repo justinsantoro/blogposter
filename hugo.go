@@ -84,6 +84,8 @@ func newPost(c io.Reader, title, tags string, summary string, author string) (*p
 //byte array
 func (p *post) Bytes() ([]byte, error) {
 	b, err := p.frontMatter.Json()
+	//add newline after frontmatter
+	b = append(b, byte('\n'))
 	if err != nil {
 		return nil, err
 	}
