@@ -12,6 +12,7 @@ import (
 	"log"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 )
 
 var PandocLoc = "pandoc"
+var r = regexp.MustCompile("[^a-zA-Z0-9\\s]+")
 
 //GetDocContent takes path to file assumed to be
 //a docx file to be converted to commonmark via
@@ -147,7 +149,7 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 	if err != nil {
 		return errors.New("newPost: " + err.Error())
 	}
-	mdname := strings.ReplaceAll(strings.ToLower(post.frontMatter.Title), " ", "-")
+	mdname := strings.ReplaceAll(strings.ToLower(r.ReplaceAllString(post.frontMatter.Title, "")), " ", "-")
 	//set file name as
 	fname := "content/post/" + mdname + ".md"
 	b, err := post.Bytes()
