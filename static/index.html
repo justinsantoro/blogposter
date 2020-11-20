@@ -6,46 +6,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Document</title>
     </head>
-
+    <style>
+        input {
+            width: 100%;
+        }
+    </style>
     <body>
-        <label for="articleTitle">Post Title:</label>
-        <input type="text" id="articleTitle" name="title"> <br>
-        <label for="articleDescription">Summary:</label>
-        <input type="text" id="articleSummary" name="summary"> <br>
-        <label for="articleTags">Tags:</label>
-        <input type="text" id="articleTags" name="tags"> <br>
-        <label for="fileinput">File:</label>
-        <input type="file" id="fileinput" name="filename"> <br>
-        <input type="submit" id="btnSubmit">
-        <script>
-            // Select your input type file and store it in a variable
-            const FileInput = document.getElementById('fileinput');
-            const TitleInput = document.getElementById('articleTitle');
-            const SummaryInput = document.getElementById('articleSummary');
-            const TagsInput = document.getElementById('articleTags');
-            const btnSumbit = document.getElementById('btnSubmit');
-
-            // This will upload the file after having read it
-            const upload = (file) => {
-            var formdata= new FormData();
-            formdata.append("userfile", file);
-            formdata.append("title", TitleInput.value);
-            formdata.append("tags", TagsInput.value);
-            formdata.append("summary", SummaryInput.value);
-            fetch('http://127.0.0.1:8080/upload', { //POST endpoint
-                method: 'POST',
-                mode: 'no-cors',
-                body: formdata
-                }).then(
-                    success => console.log(success) // Handle the success response object
-                ).catch(
-                    error => console.log(error) // Handle the error response object
-                );
-            };
-    
-            // Event handler executed when a file is selected
-            const onSubmitPost = () => upload(FileInput.files[0]);
-            btnSumbit.addEventListener('click', onSubmitPost, false);
-        </script>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <label for="articleTitle">Post Title:</label>
+            <input type="text" id="articleTitle" name="title"> <br>
+            <label for="articleDescription">Summary:</label>
+            <input type="text" id="articleSummary" name="summary"> <br>
+            <label for="articleTags">Tags:</label>
+            <input type="text" id="articleTags" name="tags"> <br>
+            <label for="fileinput">File:</label>
+            <input type="file" id="fileinput" name="userfile"> <br>
+            <input type="submit" id="btnSubmit">
+        </form>
     </body>
 </html>
