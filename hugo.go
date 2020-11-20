@@ -204,6 +204,9 @@ func (h *HugoRepo) Deploy() error {
 			Email: h.email,
 		},
 	})
+	if err != nil {
+		return errors.New("error committing to repo: " + err.Error())
+	}
 
 	//push to remote
 	if !h.test {
