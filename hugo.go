@@ -41,7 +41,12 @@ func getDocContent(c io.Reader) ([]byte, error) {
 		}
 		return nil, err
 	}
-	return outbuf.Bytes(), nil
+	b := outbuf.Bytes()
+	//replace gt and lt html placeholders with literals
+	b = bytes.ReplaceAll(b, []byte("&gt;"), []byte{'>'})
+	b = bytes.ReplaceAll(b, []byte("&lt;"), []byte{'<'})
+
+	return b, nil
 }
 
 type frontMatter struct {
