@@ -20,7 +20,7 @@ const publishTemplate = `
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Publish?</title>
 </head>
-<body onload="window.open('/content/post/{{ .Name }}', '_blank');">>
+<body onload="window.open('/post/{{ .Name }}', '_blank');">>
 	<h1>Publish {{.Name}}?</h1>
 	<p><button onclick="window.location('/publish?post={{ .Name }}');">Publish</button></p>
 	<p><button onclick="window.location('/abort?post={{ .Name }}');">Abort</button></p>
