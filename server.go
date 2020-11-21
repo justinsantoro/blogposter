@@ -180,5 +180,5 @@ func (s *server) startHttpServer(port string) {
 	}
 	http.Handle("/", proxy)
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", s.config.Port), nil))
 }
