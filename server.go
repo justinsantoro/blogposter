@@ -22,8 +22,12 @@ const publishTemplate = `
 </head>
 <body onload="window.open('/post/{{ .Name }}', '_blank');">>
 	<h1>Publish {{.Name}}?</h1>
-	<p><button onclick="window.location('/publish?post={{ .Name }}');">Publish</button></p>
-	<p><button onclick="window.location('/abort?post={{ .Name }}');">Abort</button></p>
+	<form action="/publish">
+		<p><input type="submit" value="publish"/></p>
+	</form>
+	<form action="/abort">
+		<p><input type="submit" value="abort"/></p>
+	</form>
 </body>
 </html>
 `
@@ -134,10 +138,10 @@ func (s *server) startHttpServer(port string) {
 	})
 
 	http.HandleFunc("/publish", func(w http.ResponseWriter, req *http.Request) {
-		post := req.URL.Query().Get("post")
 		success := func(err error) bool {
 			return !serverError("error handling publish: %s", w, err)
 		}
+		post := s.hugo.onDeck
 		if !success(s.hugo.Deploy()) {
 			return
 		}
