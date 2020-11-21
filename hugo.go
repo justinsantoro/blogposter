@@ -99,6 +99,7 @@ func (p *post) Bytes() ([]byte, error) {
 
 type HugoRepo struct {
 	path   string
+	baseUrl string
 	repo   *git.Repository
 	auth   *githttp.BasicAuth
 	name   string
@@ -108,7 +109,7 @@ type HugoRepo struct {
 }
 
 func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (chan error, error) {
-	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true")
+	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true","--bind", "0.0.0.0", "--baseURL", h.baseUrl)
 	cmd.Dir = h.path
 	err := cmd.Start()
 	if err != nil {
@@ -123,7 +124,7 @@ func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (ch
 	return c, nil
 }
 
-func NewHugoRepo(path string, username, token string) (*HugoRepo, error) {
+func NewHugoRepo(path string, username, token string, baseUrl string) (*HugoRepo, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
 		return nil, err
@@ -131,6 +132,7 @@ func NewHugoRepo(path string, username, token string) (*HugoRepo, error) {
 	return &HugoRepo{
 		path: path,
 		repo: repo,
+		baseUrl: baseUrl,
 		auth: &githttp.BasicAuth{
 			Username: username,
 			Password: token,

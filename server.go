@@ -51,6 +51,8 @@ type ServerConfig struct {
 	Email string `json:"email"`
 	//enable test mode
 	Test bool `json:"test"`
+	//base url for hugo test server
+	BaseUrl string
 }
 
 type server struct {
@@ -72,7 +74,7 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 
 	//start servers
 	//initialize repo
-	s.hugo, err = NewHugoRepo(s.config.Path, s.config.Username, s.config.Token)
+	s.hugo, err = NewHugoRepo(s.config.Path, s.config.Username, s.config.Token, s.config.BaseUrl)
 	if err != nil {
 		return nil, errors.New("error initializing repo: " + err.Error())
 	}

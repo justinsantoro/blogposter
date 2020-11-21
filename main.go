@@ -22,6 +22,7 @@ func main() {
 		Test: true,
 		Name: "Sarah Lehman",
 		Email: "sarah@smalltownkitten.com",
+		BaseUrl: "http://192.168.1.101:8080",
 	})
 
 	PandocLoc = "C:\\Users\\jzs\\scoop\\shims\\pandoc.exe"
