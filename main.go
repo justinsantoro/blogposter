@@ -2,32 +2,48 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 )
 
 func main() {
+	usrDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal("error getting user home dir: ", err)
+	}
+	configFile := path.Join(usrDir, "blogposter/config.json")
 
-	//test := flag.Bool("t", false, "enable test mode (no push)")
-	//flag.Parse()
+	test := flag.Bool("t", false, "enable test mode (no push)")
+	config := flag.String("config", "", "path to config file (default: $HOME/blogposter/config.json)")
+	baseurl := flag.String("BaseURL", "", "hugo server baseurl http://localhost:8080")
+	port := flag.String ("p", "", "port for http server")
+	flag.Parse()
 
-	server := NewServer(&ServerConfig{
-		Author:   "Sarah",
-		Port:     "8080",
-		Path:     "F:\\Sarah\\Repos\\smalltownkitten",
-		Username: "sarahlehman",
-		Token:    "",
-		Test: true,
-		Name: "Sarah Lehman",
-		Email: "sarah@smalltownkitten.com",
-		BaseUrl: "http://192.168.1.101:8080",
-		RemoteUrl: "https://github.com/sarahlehman/smalltownkitten",
-	})
+	if len(*config) > 0 {
+		configFile = *config
+	}
 
-	PandocLoc = "C:\\Users\\jzs\\scoop\\shims\\pandoc.exe"
+	conf, err := ReadServerConfig(configFile)
+	if err != nil {
+		log.Fatal("error reading config file: ", err)
+	}
 
+	//override conf with set cmdline flag values
+	if (*test) {
+		conf.Test = *test
+	}
+	if (len(*baseurl) > 0) {
+		conf.BaseUrl = *baseurl
+	}
+	if (len(*port) > 0) {
+		conf.Port = *port
+	}
+
+	server := NewServer(conf)
 	ctx, cancel := context.WithCancel(context.Background())
 	c, err := server.Start(ctx)
 	if err != nil {

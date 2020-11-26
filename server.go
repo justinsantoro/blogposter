@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -56,6 +58,17 @@ type ServerConfig struct {
 	BaseUrl string `json:"baseurl"`
 	//Remote url to git repository
 	RemoteUrl string `json:"remoteurl"`
+}
+
+func ReadServerConfig(fpath string) (*ServerConfig, error) {
+	log.Println("reading config file " + fpath)
+	b, err := ioutil.ReadFile(fpath)
+	if err != nil {
+		return nil, err
+	}
+	conf := new(ServerConfig)
+	err = json.Unmarshal(b, conf)
+	return conf, err
 }
 
 type server struct {
