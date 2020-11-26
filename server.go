@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -52,7 +53,9 @@ type ServerConfig struct {
 	//enable test mode
 	Test bool `json:"test"`
 	//base url for hugo test server
-	BaseUrl string
+	BaseUrl string `json:"baseurl"`
+	//Remote url to git repository
+	RemoteUrl string `json:"remoteurl"`
 }
 
 type server struct {
@@ -74,6 +77,24 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 
 	//start servers
 	//initialize repo
+
+	//check if repo exists first, if not: clone it
+	ok, err := func () (bool, error) {
+		_, err := os.Stat(s.config.Path)
+		if err == nil { return true, nil }
+		if os.IsNotExist(err) { return false, nil }
+		return false, err
+	}()
+	if err != nil {
+		log.Fatal("error checking for repo dir: ", err)
+	}
+	if !ok {
+		//get the repo
+		if CloneRepo(s.config.RemoteUrl, s.config.Path) != nil {
+			log.Fatal("error cloning repo from remoteurl: ", err)
+		}
+	}
+
 	s.hugo, err = NewHugoRepo(s.config.Path, s.config.Username, s.config.Token, s.config.BaseUrl)
 	if err != nil {
 		return nil, errors.New("error initializing repo: " + err.Error())

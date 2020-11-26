@@ -23,6 +23,7 @@ func main() {
 		Name: "Sarah Lehman",
 		Email: "sarah@smalltownkitten.com",
 		BaseUrl: "http://192.168.1.101:8080",
+		RemoteUrl: "https://github.com/sarahlehman/smalltownkitten",
 	})
 
 	PandocLoc = "C:\\Users\\jzs\\scoop\\shims\\pandoc.exe"

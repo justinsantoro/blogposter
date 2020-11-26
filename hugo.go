@@ -108,6 +108,14 @@ type HugoRepo struct {
 	test bool
 }
 
+func CloneRepo(url string, path string) error {
+	log.Printf("cloning repo from %s to %s\n", url, path)
+	_, err := git.PlainClone(path, false, &git.CloneOptions{
+		URL:               url,
+	})
+	return err
+}
+
 func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (chan error, error) {
 	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true","--bind", "0.0.0.0", "--baseURL", h.baseUrl)
 	cmd.Dir = h.path
