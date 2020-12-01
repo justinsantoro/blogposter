@@ -61,6 +61,12 @@ type ServerConfig struct {
 	RemoteUrl string `json:"remoteurl"`
 }
 
+type postpushfunc func() error
+
+var defaultpostpush postpushfunc = func() error {
+	return nil
+}
+
 func ReadServerConfig(fpath string) (*ServerConfig, error) {
 	log.Println("reading config file " + fpath)
 	b, err := ioutil.ReadFile(fpath)
@@ -76,10 +82,11 @@ type server struct {
 	stopped chan struct{}
 	hugo    *HugoRepo
 	config  *ServerConfig
+	PostPush postpushfunc
 }
 
 func NewServer(config *ServerConfig) *server {
-	return &server{config: config, stopped: make(chan struct{})}
+	return &server{config: config, stopped: make(chan struct{}), PostPush: defaultpostpush}
 }
 
 func (s *server) Start(ctx context.Context) (chan error, error) {
@@ -180,6 +187,9 @@ func (s *server) startHttpServer(port string) {
 		}
 		post := s.hugo.onDeck
 		if !success(s.hugo.Deploy()) {
+			return
+		}
+		if !success(s.PostPush()) {
 			return
 		}
 		msg := fmt.Sprint("successfully published ", post)
