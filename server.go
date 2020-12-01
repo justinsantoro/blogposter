@@ -97,7 +97,7 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 		}
 	}
 
-	s.hugo, err = NewHugoRepo(s.config.Path, s.config.Username, s.config.Token, s.config.BaseUrl)
+	s.hugo, err = NewHugoRepo(s.config.Path, s.config.Username, s.config.Token, s.config.BaseUrl, s.config.Name, s.config.Email)
 	if err != nil {
 		return nil, errors.New("error initializing repo: " + err.Error())
 	}

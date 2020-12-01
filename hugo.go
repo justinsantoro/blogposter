@@ -132,7 +132,7 @@ func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (ch
 	return c, nil
 }
 
-func NewHugoRepo(path string, username, token string, baseUrl string) (*HugoRepo, error) {
+func NewHugoRepo(path, username, token, baseUrl, name, email string) (*HugoRepo, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
 		return nil, err
@@ -145,6 +145,8 @@ func NewHugoRepo(path string, username, token string, baseUrl string) (*HugoRepo
 			Username: username,
 			Password: token,
 		},
+		name: name,
+		email: email,
 	}, nil
 }
 
