@@ -169,8 +169,10 @@ func (s *server) startHttpServer(port string) {
 		if !success(s.hugo.Deploy()) {
 			return
 		}
-		if !success(s.PostPush()) {
-			return
+		if !s.config.Test {
+			if !success(s.PostPush()) {
+				return
+			}
 		}
 		msg := fmt.Sprint("successfully published ", post)
 		_, err := w.Write([]byte(msg))
