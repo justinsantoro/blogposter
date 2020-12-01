@@ -6,37 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
+	"time"
 )
 
-const publishTemplate = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Publish?</title>
-</head>
-<body onload="window.open('/post/{{ .Name }}', '_blank');">>
-	<h1>Publish {{.Name}}?</h1>
-	<form action="/publish">
-		<p><input type="submit" value="publish"/></p>
-	</form>
-	<form action="/abort">
-		<p><input type="submit" value="abort"/></p>
-	</form>
-</body>
-</html>
-`
-
-var t = template.Must(template.New("publish").Parse(publishTemplate))
+var posturlregxp = regexp.MustCompile(`(?m)\/post\/[a-zA-Z0-9]+`)
 
 type ServerConfig struct {
 	//Author name to put on posts
@@ -173,12 +154,11 @@ func (s *server) startHttpServer(port string) {
 		if !success("hugo new", s.hugo.New(file, title, tags, summary, s.config.Author)) {
 			return
 		}
-		w.Header().Add("content-type", "text/html")
+		//wait for hugo to rebuild
+		//TODO: add a channel for this?
+		time.Sleep(time.Second * 4)
 		//execute publish template
-		if !success("template", t.Execute(w, struct{ Name string }{s.hugo.onDeck})) {
-			return
-		}
-		log.Printf("sucessfully staged %s for publishing", s.hugo.onDeck)
+		http.Redirect(w, req, fmt.Sprintf("/post/%s/", s.hugo.onDeck), int(http.StatusTemporaryRedirect))
 	})
 
 	http.HandleFunc("/publish", func(w http.ResponseWriter, req *http.Request) {
@@ -247,7 +227,33 @@ func (s *server) startHttpServer(port string) {
 			response.Body = ioutil.NopCloser(strings.NewReader(html))
 			response.Header["Content-Length"] = []string{fmt.Sprint(len(html))}
 		}
-
+		if posturlregxp.MatchString(url.String()) {
+			//if this is a post
+			urlparts := strings.Split(string(url.String()[:len(url.String())-1]), "/")
+			postname := urlparts[len(urlparts)-1]
+			if postname == s.hugo.onDeck {
+				doc, err := goquery.NewDocumentFromReader(response.Body)
+				if err != nil {
+					return err
+				}//inject abort / publish buttons
+				doc.Find("#navMenu").AppendHtml(`<li class="theme-switch-item">
+            <a href="/publish" title="Publish Post">
+                <i class="fa fa-paper-plane fa-fw" aria-hidden="true"></i>
+            </a>
+        	</li>
+			<li class="theme-switch-item">
+            <a href="/abort" title="Abort Publish">
+                <i class="fa fa-ban fa-fw" aria-hidden="true"></i>
+            </a>
+        	</li>`)
+				html, err := doc.Html()
+				if err != nil {
+					return err
+				}
+				response.Body = ioutil.NopCloser(strings.NewReader(html))
+				response.Header["Content-Length"] = []string{fmt.Sprint(len(html))}
+			}
+		}
 		return nil
 	}
 	http.Handle("/", proxy)
