@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -210,6 +211,33 @@ func (s *server) startHttpServer(port string) {
 	})
 	proxy.ModifyResponse = func(response *http.Response) error {
 		response.Header.Set("Access-Control-Allow-Origin", "*")
+		if response.StatusCode != http.StatusOK {
+			return nil
+		}
+		//get original request url
+		url := response.Request.URL
+
+		//if url == basepath then this is returning homepage, add the "new post button"
+		log.Println("requested url: ", url.String())
+		if url.String() == "http://localhost:1313/" {
+			log.Println("injecting html into response")
+			doc, err := goquery.NewDocumentFromReader(response.Body)
+			if err != nil {
+				return err
+			}
+			doc.Find("#navMenu").AppendHtml(`<li class="theme-switch-item">
+            <a href="/new/" title="New Post">
+                <i class="fa fa-file fa-fw" aria-hidden="true"></i>
+            </a>
+        </li>`)
+			html, err := doc.Html()
+			if err != nil {
+				return err
+			}
+			response.Body = ioutil.NopCloser(strings.NewReader(html))
+			response.Header["Content-Length"] = []string{fmt.Sprint(len(html))}
+		}
+
 		return nil
 	}
 	http.Handle("/", proxy)
