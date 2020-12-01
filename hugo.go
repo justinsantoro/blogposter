@@ -214,6 +214,7 @@ func (h *HugoRepo) Deploy() error {
 		Author: &object.Signature{
 			Name:  h.name,
 			Email: h.email,
+			When: time.Now(),
 		},
 	})
 	if err != nil {
