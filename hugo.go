@@ -308,6 +308,7 @@ func (h *HugoRepo) Deploy() error {
 			Auth: h.auth,
 		})
 	}
+	h.onDeck = nil
 	return nil
 }
 
