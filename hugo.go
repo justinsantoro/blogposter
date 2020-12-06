@@ -168,7 +168,7 @@ func (h *HugoRepo) writeFile(fname string, b []byte) error {
 	return ioutil.WriteFile(path.Join(h.path, fname), b, 0644)
 }
 
-func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
+func (h *HugoRepo) stageChange(post *post) error {
 	//reset in case there are any lingering changes
 	err := h.Abort()
 	if err != nil {
@@ -181,11 +181,6 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 		return errors.New("worktree: " + err.Error())
 	}
 
-	//create post file
-	post, err := newPost(c, title, tags, summary, author)
-	if err != nil {
-		return errors.New("newPost: " + err.Error())
-	}
 	fname := post.Fname()
 	b, err := post.Bytes()
 	if err != nil {
@@ -210,6 +205,16 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 	h.onDeck = &OnDeck{name: name}
 
 	return nil
+}
+
+func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
+	//create post file
+	post, err := newPost(c, title, tags, summary, author)
+	if err != nil {
+		return errors.New("newPost: " + err.Error())
+	}
+
+	return h.stageChange(post)
 }
 
 func (h *HugoRepo) Deploy() error {
