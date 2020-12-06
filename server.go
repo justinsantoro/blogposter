@@ -154,6 +154,15 @@ func (s *server) startHttpServer(port string) {
 		if !success("hugo new", s.hugo.New(file, title, tags, summary, s.config.Author)) {
 			return
 		}
+		//set commit message
+		if s.hugo.onDeck == nil {
+			success("set commit messge", errors.New("hugo onDeck is nil"))
+		}
+		s.hugo.onDeck.msg = "published " + s.hugo.onDeck.name
+		//get user provided commit msg
+		if umsg := req.URL.Query().Get("msg"); len(umsg) > 0 {
+			s.hugo.onDeck.msg = umsg
+		}
 		//wait for hugo to rebuild
 		//TODO: add a channel for this?
 		time.Sleep(time.Second * 4)
@@ -165,7 +174,8 @@ func (s *server) startHttpServer(port string) {
 		success := func(err error) bool {
 			return !serverError("error handling publish: %s", w, err)
 		}
-		post := s.hugo.onDeck
+
+		post := s.hugo.onDeck.name
 		if !success(s.hugo.Deploy()) {
 			return
 		}
@@ -233,7 +243,7 @@ func (s *server) startHttpServer(port string) {
 			//if this is a post
 			urlparts := strings.Split(string(url.String()[:len(url.String())-1]), "/")
 			postname := urlparts[len(urlparts)-1]
-			if postname == s.hugo.onDeck {
+			if postname == s.hugo.onDeck.name {
 				doc, err := goquery.NewDocumentFromReader(response.Body)
 				if err != nil {
 					return err

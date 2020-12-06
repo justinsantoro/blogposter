@@ -113,8 +113,13 @@ type HugoRepo struct {
 	auth   *githttp.BasicAuth
 	name   string
 	email  string
-	onDeck string
+	onDeck *OnDeck
 	test bool
+}
+
+type OnDeck struct {
+	name string
+	msg string
 }
 
 func CloneRepo(url string, path string) error {
@@ -197,7 +202,12 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 		return err
 	}
 
-	h.onDeck = fname
+	//set on deck name to just the name of the post file
+	//no extension
+	nparts := strings.Split(fname, "/")
+	name := nparts[len(nparts) -1]
+	name = name[:len(name)-3]
+	h.onDeck = &OnDeck{name: name}
 
 	return nil
 }
@@ -213,15 +223,15 @@ func (h *HugoRepo) Deploy() error {
 		return err
 	}
 	if st.IsClean() {
-		h.onDeck = ""
+		h.onDeck = nil
 		return errors.New("index is clean")
 	}
 
 	//add commit
-	if len(h.onDeck) == 0 {
+	if h.onDeck == nil {
 		return errors.New("went to commit but onDeck is empty")
 	}
-	_, err = wt.Commit("publish "+h.onDeck, &git.CommitOptions{
+	_, err = wt.Commit(h.onDeck.msg, &git.CommitOptions{
 		Author: &object.Signature{
 			Name:  h.name,
 			Email: h.email,
@@ -242,6 +252,7 @@ func (h *HugoRepo) Deploy() error {
 }
 
 func (h *HugoRepo) Abort() error {
+	h.onDeck = nil
 	//unstage changes and clean directory
 	head, err := h.repo.Head()
 	if err != nil {
