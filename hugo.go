@@ -257,7 +257,7 @@ func (h *HugoRepo) GetPost(name string) (*post, error) {
 	return existingPost(b)
 }
 
-func (h HugoRepo) Update(c io.Reader, name, title, tags, summary, author string) error {
+func (h *HugoRepo) Update(c io.Reader, name, title, tags, summary, author string) error {
 	post, err := h.GetPost(name)
 	if err != nil {
 		return err
