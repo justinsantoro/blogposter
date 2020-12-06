@@ -98,10 +98,10 @@ func newPost(c io.Reader, title, tags string, summary string, author string) (*p
 }
 
 func existingPost(b []byte) (*post, error) {
-	p := new(post)
+	p := &post{frontMatter:new(frontMatter)}
 	//split off front matter
 	parts := bytes.SplitAfter(b, []byte{'}'})
-	if len(parts) > 0 {
+	if len(parts) > 2 {
 		return nil, errors.New("can't parse post because it contains more than one '}' character")
 	}
 	err := json.Unmarshal(parts[0], p.frontMatter)
