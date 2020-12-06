@@ -85,6 +85,21 @@ func newPost(c io.Reader, title, tags string, summary string, author string) (*p
 	}, nil
 }
 
+func existingPost(b []byte) (*post, error) {
+	p := new(post)
+	//split off front matter
+	parts := bytes.SplitAfter(b, []byte{'}'})
+	if len(parts) > 0 {
+		return nil, errors.New("can't parse post because it contains more than one '}' character")
+	}
+	err := json.Unmarshal(parts[0], p.frontMatter)
+	if err != nil {
+		return nil, err
+	}
+	p.content = parts[1]
+	return p, nil
+}
+
 //Bytes returns the post as a single
 //byte array
 func (p *post) Bytes() ([]byte, error) {
@@ -168,6 +183,10 @@ func (h *HugoRepo) writeFile(fname string, b []byte) error {
 	return ioutil.WriteFile(path.Join(h.path, fname), b, 0644)
 }
 
+func (h *HugoRepo) readFile(fname string) ([]byte, error) {
+	return ioutil.ReadFile(path.Join(h.path, fname))
+}
+
 func (h *HugoRepo) stageChange(post *post) error {
 	//reset in case there are any lingering changes
 	err := h.Abort()
@@ -215,6 +234,30 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 	}
 
 	return h.stageChange(post)
+}
+
+func (h *HugoRepo) GetPost(name string) (*post, error) {
+	//build file name
+	b, err := h.readFile("content/post/" + name + ".md")
+	if err != nil {
+		return nil, err
+	}
+	return existingPost(b)
+}
+
+func (h HugoRepo) Update(c io.Reader, name, title, tags, summary, author string) error {
+	post, err := h.GetPost(name)
+	if err != nil {
+		return err
+	}
+	npost, err := newPost(c, title, tags, summary, author)
+	if err != nil {
+		return err
+	}
+	//copy old post date to new
+	npost.frontMatter.Date = post.frontMatter.Date
+
+	return h.stageChange(npost)
 }
 
 func (h *HugoRepo) Deploy() error {
