@@ -159,6 +159,10 @@ func NewHugoRepo(path, username, token, baseUrl, name, email string) (*HugoRepo,
 	}, nil
 }
 
+func (h *HugoRepo) writeFile(fname string, b []byte) error {
+	return ioutil.WriteFile(path.Join(h.path, fname), b, 0644)
+}
+
 func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 	//reset in case there are any lingering changes
 	err := h.Abort()
@@ -182,7 +186,7 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 	if err != nil {
 		return errors.New("PostBytes: " + err.Error())
 	}
-	err = ioutil.WriteFile(path.Join(h.path, fname), b, 0644)
+	err = h.writeFile(fname, b)
 	if err != nil {
 		return err
 	}
