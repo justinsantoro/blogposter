@@ -97,6 +97,15 @@ func (p *post) Bytes() ([]byte, error) {
 	return append(b, p.content...), nil
 }
 
+func (p *post) Fname() string {
+	if p.frontMatter == nil {
+		panic("cant get post fname because frontmatter is nil")
+	}
+	mdname := strings.ReplaceAll(strings.ToLower(r.ReplaceAllString(p.frontMatter.Title, "")), " ", "-")
+	//set file name as
+	return "content/post/" + mdname + ".md"
+}
+
 type HugoRepo struct {
 	path   string
 	baseUrl string
@@ -168,9 +177,7 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 	if err != nil {
 		return errors.New("newPost: " + err.Error())
 	}
-	mdname := strings.ReplaceAll(strings.ToLower(r.ReplaceAllString(post.frontMatter.Title, "")), " ", "-")
-	//set file name as
-	fname := "content/post/" + mdname + ".md"
+	fname := post.Fname()
 	b, err := post.Bytes()
 	if err != nil {
 		return errors.New("PostBytes: " + err.Error())
@@ -186,7 +193,7 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 		return err
 	}
 
-	h.onDeck = mdname
+	h.onDeck = fname
 
 	return nil
 }
