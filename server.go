@@ -43,6 +43,7 @@ var input = template.Must(template.New("input").Parse(`<!DOCTYPE html>
             <label for="fileinput">File:</label>
             <input type="file" id="fileinput" name="userfile"> <br>
             <input type="submit" id="btnSubmit">
+			<input type="hidden" name="postname" value="{{ .Postname }}">
         </form>
     </body>
 </html>`))
@@ -50,6 +51,7 @@ var input = template.Must(template.New("input").Parse(`<!DOCTYPE html>
 type InputForm struct {
 	Action string
 	Fm *frontMatter
+	Postname string
 }
 
 type ServerConfig struct {
@@ -203,6 +205,48 @@ func (s *server) startHttpServer(port string) {
 		http.Redirect(w, req, fmt.Sprintf("/post/%s/", s.hugo.onDeck), int(http.StatusTemporaryRedirect))
 	})
 
+	http.HandleFunc("/replace", func(w http.ResponseWriter, req *http.Request) {
+		success := func(prefix string, err error) bool {
+			return !serverError(fmt.Sprintf("error handling upload: %s: %%s", prefix), w, err)
+		}
+
+		err := req.ParseMultipartForm(32 << 20) // limit your max input length!
+		if !success("parse form", err) {
+			return
+		}
+		//get file from form
+		file, _, err := req.FormFile("userfile")
+		if !success("get userfile", err) {
+			return
+		}
+		defer file.Close()
+
+		//get front matter from form
+		title := strings.TrimSpace(req.FormValue("title"))
+		tags := strings.ToLower(strings.TrimSpace(req.FormValue("tags")))
+		summary := strings.TrimSpace(req.FormValue("summary"))
+		postname := strings.TrimSpace(req.FormValue("postname"))
+
+		//create post in repo
+		if !success("hugo new", s.hugo.Update(file, postname, title, tags, summary, s.config.Author)) {
+			return
+		}
+		//set commit message
+		if s.hugo.onDeck == nil {
+			success("set commit messge", errors.New("hugo onDeck is nil"))
+		}
+		s.hugo.onDeck.msg = "updated " + s.hugo.onDeck.name
+		//get user provided commit msg
+		if umsg := req.URL.Query().Get("msg"); len(umsg) > 0 {
+			s.hugo.onDeck.msg = umsg
+		}
+		//wait for hugo to rebuild
+		//TODO: add a channel for this?
+		time.Sleep(time.Second * 4)
+		//execute publish template
+		http.Redirect(w, req, fmt.Sprintf("/post/%s/", s.hugo.onDeck.name), int(http.StatusTemporaryRedirect))
+	})
+
 	http.HandleFunc("/publish", func(w http.ResponseWriter, req *http.Request) {
 		success := func(err error) bool {
 			return !serverError("error handling publish: %s", w, err)
@@ -243,6 +287,24 @@ func (s *server) startHttpServer(port string) {
 		serverError("error executing template", w, input.Execute(w, &InputForm{
 			Action: "/upload",
 			Fm:     new(frontMatter),
+		}))
+	})
+
+	http.HandleFunc("/edit", func(w http.ResponseWriter, req *http.Request) {
+		postname := req.URL.Query().Get("post")
+		if len(postname) == 0 {
+			serverError("%s", w, errors.New("post parameter not set"))
+			return
+		}
+		post, err := s.hugo.GetPost(postname)
+		if err != nil {
+			serverError("error getting existing post: %s", w, err)
+			return
+		}
+		serverError("error executing template", w, input.Execute(w, &InputForm{
+			Action: "/replace",
+			Fm:     post.frontMatter,
+			Postname: postname,
 		}))
 	})
 
