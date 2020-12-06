@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,6 +19,38 @@ import (
 )
 
 var posturlregxp = regexp.MustCompile(`(?m)\/post\/[a-zA-Z0-9]+`)
+
+var input = template.Must(template.New("input").Parse(`<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Document</title>
+    </head>
+    <style>
+        input {
+            width: 100%;
+        }
+    </style>
+    <body>
+        <form action="{{ .Action }}" method="post" enctype="multipart/form-data">
+            <label for="articleTitle">Post Title:</label>
+            <input type="text" id="articleTitle" name="title" value="{{ .Fm.Title }}"> <br>
+            <label for="articleDescription">Summary:</label>
+            <input type="text" id="articleSummary" name="summary" value="{{ .Fm.Summary }}"> <br>
+            <label for="articleTags">Tags:</label>
+            <input type="text" id="articleTags" name="tags" value="{{ .Fm.TagList }}"> <br>
+            <label for="fileinput">File:</label>
+            <input type="file" id="fileinput" name="userfile"> <br>
+            <input type="submit" id="btnSubmit">
+        </form>
+    </body>
+</html>`))
+
+type InputForm struct {
+	Action string
+	Fm *frontMatter
+}
 
 type ServerConfig struct {
 	//Author name to put on posts
@@ -206,7 +239,13 @@ func (s *server) startHttpServer(port string) {
 		}
 	})
 
-	http.Handle("/new/", http.StripPrefix("/new/", http.FileServer(http.Dir("./static"))))
+	http.HandleFunc("/new", func(w http.ResponseWriter, req *http.Request) {
+		serverError("error executing template", w, input.Execute(w, &InputForm{
+			Action: "/upload",
+			Fm:     new(frontMatter),
+		}))
+	})
+
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
 		Scheme: "http",
 		Host: "localhost:1313",
@@ -228,7 +267,7 @@ func (s *server) startHttpServer(port string) {
 				return err
 			}
 			doc.Find("#navMenu").AppendHtml(`<li class="theme-switch-item">
-            <a href="/new/" title="New Post">
+            <a href="/new" title="New Post">
                 <i class="fa fa-file fa-fw" aria-hidden="true"></i>
             </a>
         </li>`)

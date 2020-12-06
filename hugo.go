@@ -61,6 +61,18 @@ func (fm *frontMatter) Json() ([]byte, error) {
 	return json.MarshalIndent(fm, "", "    ")
 }
 
+//TagList returns a space seperated list of tags
+func (fm *frontMatter) TagList() string {
+	s := ""
+	if len(fm.Tags) == 0 {
+		return s
+	}
+	for _, t := range fm.Tags{
+		s = s + " " + t
+	}
+	return s[1:]
+}
+
 //Post is a blog post
 type post struct {
 	content     []byte
