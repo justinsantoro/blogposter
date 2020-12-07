@@ -341,15 +341,16 @@ func (s *server) startHttpServer(port string) {
 			response.Header["Content-Length"] = []string{fmt.Sprint(len(html))}
 		}
 		if posturlregxp.MatchString(url.String()) {
+			doc, err := goquery.NewDocumentFromReader(response.Body)
+			if err != nil {
+				return err
+			}
 			//if this is a post
 			urlparts := strings.Split(string(url.String()[:len(url.String())-1]), "/")
 			postname := urlparts[len(urlparts)-1]
 			if s.hugo.onDeck != nil {
 				if postname == s.hugo.onDeck.name {
-					doc, err := goquery.NewDocumentFromReader(response.Body)
-					if err != nil {
-						return err
-					}//inject abort / publish buttons
+					//inject abort / publish buttons
 					doc.Find("#navMenu").AppendHtml(`<li class="theme-switch-item">
             <a href="/publish" title="Publish Post">
                 <i class="fa fa-paper-plane fa-fw" aria-hidden="true"></i>
@@ -366,8 +367,21 @@ func (s *server) startHttpServer(port string) {
 					}
 					response.Body = ioutil.NopCloser(strings.NewReader(html))
 					response.Header["Content-Length"] = []string{fmt.Sprint(len(html))}
+					return nil
 				}
 			}
+			//inject edit button
+			doc.Find("#navMenu").AppendHtml(fmt.Sprintf(`<li class="theme-switch-item">
+            <a href="/edit?post=%s" title="Edit Post">
+                <i class="fa fa-edit fa-fw"></i>
+            </a>
+        	</li>`, postname))
+			html, err := doc.Html()
+			if err != nil {
+				return err
+			}
+			response.Body = ioutil.NopCloser(strings.NewReader(html))
+			response.Header["Content-Length"] = []string{fmt.Sprint(len(html))}
 		}
 		return nil
 	}
