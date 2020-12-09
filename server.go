@@ -202,7 +202,7 @@ func (s *server) startHttpServer(port string) {
 		//TODO: add a channel for this?
 		time.Sleep(time.Second * 4)
 		//execute publish template
-		http.Redirect(w, req, fmt.Sprintf("/post/%s/", s.hugo.onDeck), int(http.StatusTemporaryRedirect))
+		http.Redirect(w, req, fmt.Sprintf("/post/%s/", s.hugo.onDeck.name), int(http.StatusTemporaryRedirect))
 	})
 
 	http.HandleFunc("/replace", func(w http.ResponseWriter, req *http.Request) {
