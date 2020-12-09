@@ -14,6 +14,9 @@ import (
 )
 
 func main() {
+	//log to stdout
+	log.SetOutput(os.Stdout)
+
 	usrDir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal("error getting user home dir: ", err)
