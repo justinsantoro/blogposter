@@ -45,6 +45,8 @@ func getDocContent(c io.Reader) ([]byte, error) {
 	//replace gt and lt html placeholders with literals
 	b = bytes.ReplaceAll(b, []byte("&gt;"), []byte{'>'})
 	b = bytes.ReplaceAll(b, []byte("&lt;"), []byte{'<'})
+	//undo pandoc escaping of horizontal line rules
+	b = bytes.ReplaceAll(b, []byte("\\---"), []byte("---"))
 
 	return b, nil
 }
