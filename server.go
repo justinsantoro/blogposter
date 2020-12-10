@@ -361,16 +361,9 @@ func (s *server) startHttpServer(port string) {
                 <i class="fa fa-ban fa-fw" aria-hidden="true"></i>
             </a>
         	</li>`)
-					html, err := doc.Html()
-					if err != nil {
-						return err
-					}
-					response.Body = ioutil.NopCloser(strings.NewReader(html))
-					response.Header["Content-Length"] = []string{fmt.Sprint(len(html))}
-					return nil
 				}
 			}
-			//inject edit button
+			//inject edit button on all posts
 			doc.Find("#navMenu").AppendHtml(fmt.Sprintf(`<li class="theme-switch-item">
             <a href="/edit?post=%s" title="Edit Post">
                 <i class="fa fa-edit fa-fw"></i>
