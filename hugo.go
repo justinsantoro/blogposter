@@ -56,7 +56,7 @@ type frontMatter struct {
 	Author      string    `json:"author,omitempty"`
 	Date        time.Time `json:"date"`
 	Summary string    `json:"summary,omitempty"`
-	Tags        []string  `json:"tags"`
+	Tags        []string  `json:"tags,omitemtpy"`
 }
 
 func (fm *frontMatter) Json() ([]byte, error) {
