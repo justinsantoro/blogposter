@@ -160,7 +160,7 @@ func CloneRepo(url string, path string) error {
 }
 
 func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (chan error, error) {
-	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true","--bind", "0.0.0.0", "--baseURL", h.baseUrl)
+	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true","--disableLiveReload","--bind", "0.0.0.0", "--baseURL", h.baseUrl)
 	cmd.Dir = h.path
 	err := cmd.Start()
 	if err != nil {
