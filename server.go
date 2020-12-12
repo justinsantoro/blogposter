@@ -202,7 +202,7 @@ func (s *server) startHttpServer(port string) {
 		//TODO: add a channel for this?
 		time.Sleep(time.Second * 4)
 		//execute publish template
-		http.Redirect(w, req, fmt.Sprintf("/post/%s/", s.hugo.onDeck.name), int(http.StatusTemporaryRedirect))
+		http.Redirect(w, req, fmt.Sprintf("/post/%s/?redirected=1", s.hugo.onDeck.name), int(http.StatusTemporaryRedirect))
 	})
 
 	http.HandleFunc("/replace", func(w http.ResponseWriter, req *http.Request) {
@@ -244,7 +244,7 @@ func (s *server) startHttpServer(port string) {
 		//TODO: add a channel for this?
 		time.Sleep(time.Second * 4)
 		//execute publish template
-		http.Redirect(w, req, fmt.Sprintf("/post/%s/", s.hugo.onDeck.name), int(http.StatusTemporaryRedirect))
+		http.Redirect(w, req, fmt.Sprintf("/post/%s/?redirected=1", s.hugo.onDeck.name), int(http.StatusTemporaryRedirect))
 	})
 
 	http.HandleFunc("/publish", func(w http.ResponseWriter, req *http.Request) {
@@ -347,9 +347,16 @@ func (s *server) startHttpServer(port string) {
 			}
 			//if this is a post
 			urlparts := strings.Split(string(url.String()[:len(url.String())-1]), "/")
-			postname := urlparts[len(urlparts)-1]
+			//drop off querystring
+			postname := strings.Split(urlparts[len(urlparts)-2], "?")[0]
+			editLink := "/edit?post=" + postname
 			if s.hugo.onDeck != nil {
 				if postname == s.hugo.onDeck.name {
+					//change edit link to back button (retains selected document)
+					//if redirected directly from new or edit page
+					if len(response.Request.URL.Query().Get("redirected")) > 0 {
+						editLink = "javascript:history.back()"
+					}
 					//inject abort / publish buttons
 					doc.Find("#navMenu").AppendHtml(`<li class="theme-switch-item">
             <a href="/publish" title="Publish Post">
@@ -365,10 +372,10 @@ func (s *server) startHttpServer(port string) {
 			}
 			//inject edit button on all posts
 			doc.Find("#navMenu").AppendHtml(fmt.Sprintf(`<li class="theme-switch-item">
-            <a href="/edit?post=%s" title="Edit Post">
+            <a href="%s" title="Edit Post">
                 <i class="fa fa-edit fa-fw"></i>
             </a>
-        	</li>`, postname))
+        	</li>`, editLink))
 			html, err := doc.Html()
 			if err != nil {
 				return err
