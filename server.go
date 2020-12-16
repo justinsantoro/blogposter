@@ -155,7 +155,7 @@ func serverError(msgTemplate string, w http.ResponseWriter, err error) bool {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err = w.Write([]byte(msg))
 		if err != nil {
-			log.Println("error writing error message to response body: %s", err)
+			log.Printf("error writing error message to response body: %s\n", err)
 		}
 		return true
 	}

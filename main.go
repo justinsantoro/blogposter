@@ -57,7 +57,7 @@ func main() {
 			return errors.New("error triggering deploy: " + err.Error())
 		}
 		if resp.StatusCode != http.StatusOK {
-			return errors.New(fmt.Sprint("deploy hook retuned non-successful status code: %s - %s", resp.StatusCode, resp.Body))
+			return errors.New(fmt.Sprintf("deploy hook retuned non-successful status code: %d - %s", resp.StatusCode, resp.Body))
 		}
 		return nil
 	}
