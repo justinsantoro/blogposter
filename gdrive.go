@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
+	"io"
+	"log"
 
 	//"golang.org/x/oauth2"
 	//"golang.org/x/oauth2/google"
@@ -14,6 +17,7 @@ import (
 	"io/ioutil"
 )
 
+const docxMIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 type GDriveClient struct {
 	*drive.Service
 }
@@ -46,9 +50,19 @@ func (g *GDriveClient) ListFiles() ([]*drive.File, error) {
 	b, err := files.MarshalJSON()
 	bi := new(bytes.Buffer)
 	err = json.Indent(bi, b, "", "    ")
+func (g *GDriveClient) GetFile(id string) (io.ReadCloser, error) {
+	fileresp, err := g.Service.Files.Export(id, docxMIME).Download()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("files: %s \n", bi)
-	return files.Files, nil
+	if fileresp.StatusCode != 200 {
+		defer fileresp.Body.Close()
+		b, err := ioutil.ReadAll(fileresp.Body)
+		if err != nil {
+			log.Printf("GetFile: error reading unsuccessful response body: - %s\n", err)
+		}
+		return nil, errors.New(fmt.Sprintf("download request returned non-successful error code: %d - %s", fileresp.StatusCode, b))
+	}
+	return fileresp.Body, nil
+
 }

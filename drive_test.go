@@ -43,4 +43,15 @@ func TestListFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal("error listing files: ", err)
 	}
+func TestDownload(t *testing.T) {
+	body, err := gdrive.GetFile(testFileID)
+	if err != nil {
+		t.Errorf("error downloading file: %s", err)
+	}
+	defer body.Close()
+	content, err := getDocContent(body)
+	if err != nil {
+		t.Errorf("error converting document content: %s", err)
+	}
+	fmt.Printf("%s", content)
 }
