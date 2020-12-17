@@ -11,6 +11,7 @@ import (
 
 var gdrive *GDriveClient
 var configFile = os.Getenv("GDRIVE_CONFIG")
+var testFileID = "1AJQX6aglI_nWCzK5NK2uqrX9bnbswXVoQEhlgQ3NUCY"
 
 func TestCreateDrive(t *testing.T) {
 	if len(configFile) == 0 {
@@ -39,10 +40,17 @@ func TestListDrive(t *testing.T) {
 }
 
 func TestListFiles(t *testing.T) {
-	_, err := gdrive.ListFiles()
+	files, err := gdrive.ListFiles()
 	if err != nil {
 		t.Fatal("error listing files: ", err)
 	}
+	for _, f := range files {
+		if f.MimeType == folderMIME {
+			t.Errorf("file list contains folder: %s", f.Name)
+		}
+	}
+}
+
 func TestDownload(t *testing.T) {
 	body, err := gdrive.GetFile(testFileID)
 	if err != nil {
