@@ -42,7 +42,16 @@ var input = template.Must(template.New("input").Parse(`<!DOCTYPE html>
             <label for="articleTags">Tags:</label>
             <input type="text" id="articleTags" name="tags" value="{{ .Fm.TagList }}"> <br>
             <label for="fileinput">File:</label>
-            <input type="file" id="fileinput" name="userfile"> <br>
+			{{if .DriveFiles }}
+			<select id="fileinput" name="userfile">
+				{{ range .DriveFiles }}
+				<option value="{{.Id}}">{{.Name}}</option>
+				{{end}}
+			</select><br>
+			{{ else }}
+			<input type="file" id="fileinput" name="userfile"> <br>
+			{{ end }}
+            
             <input type="submit" id="btnSubmit">
 			<input type="hidden" name="postname" value="{{ .Postname }}">
         </form>
@@ -53,7 +62,7 @@ type InputForm struct {
 	Action string
 	Fm *frontMatter
 	Postname string
-	driveFiles []*drive.File
+	DriveFiles []*drive.File
 }
 
 type ServerConfig struct {
