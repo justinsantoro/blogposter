@@ -8,6 +8,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"google.golang.org/api/drive/v3"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -43,11 +44,12 @@ var input = template.Must(template.New("input").Parse(`<!DOCTYPE html>
             <input type="text" id="articleTags" name="tags" value="{{ .Fm.TagList }}"> <br>
             <label for="fileinput">File:</label>
 			{{if .DriveFiles }}
-			<select id="fileinput" name="userfile">
+			<select id="fileinput" name="drivefile">
 				{{ range .DriveFiles }}
 				<option value="{{.Id}}">{{.Name}}</option>
 				{{end}}
 			</select><br>
+			<a href="{{.CurrentPath}}?upload=true">direct upload</a>
 			{{ else }}
 			<input type="file" id="fileinput" name="userfile"> <br>
 			{{ end }}
@@ -63,6 +65,17 @@ type InputForm struct {
 	Fm *frontMatter
 	Postname string
 	DriveFiles []*drive.File
+}
+
+func (i *InputForm) CurrentPath() string {
+	switch i.Action {
+	case "/replace":
+		return "/edit"
+	case "/upload":
+		return "/new"
+	default:
+		panic("InputForm: unknown Action to path mapping")
+	}
 }
 
 type ServerConfig struct {
@@ -195,10 +208,20 @@ func (s *server) startHttpServer(port string) {
 		if !success("parse form", err) {
 			return
 		}
+
 		//get file from form
-		file, _, err := req.FormFile("userfile")
-		if !success("get userfile", err) {
-			return
+		var file io.ReadCloser
+		if id := req.FormValue("drivefile"); len(id) > 0 {
+			file, err = s.drive.GetFile(id)
+			if !success("get drivefile", err) {
+				return
+			}
+		} else {
+			//get file from form
+			file, _, err = req.FormFile("userfile")
+			if !success("get userfile", err) {
+				return
+			}
 		}
 		defer file.Close()
 
@@ -237,9 +260,18 @@ func (s *server) startHttpServer(port string) {
 			return
 		}
 		//get file from form
-		file, _, err := req.FormFile("userfile")
-		if !success("get userfile", err) {
-			return
+		var file io.ReadCloser
+		if id := req.FormValue("drivefile"); len(id) > 0 {
+			file, err = s.drive.GetFile(id)
+			if !success("get drivefile", err) {
+				return
+			}
+		} else {
+			//get file from form
+			file, _, err = req.FormFile("userfile")
+			if !success("get userfile", err) {
+				return
+			}
 		}
 		defer file.Close()
 
@@ -306,9 +338,20 @@ func (s *server) startHttpServer(port string) {
 	})
 
 	http.HandleFunc("/new", func(w http.ResponseWriter, req *http.Request) {
+		upload := req.URL.Query().Get("upload")
+		var err error
+		var files []*drive.File
+		if s.drive != nil && len(upload) == 0 {
+			files, err = s.drive.ListFiles()
+			if err != nil {
+				serverError("error getting drive files: %s", w, err)
+				return
+			}
+		}
 		serverError("error executing template", w, input.Execute(w, &InputForm{
 			Action: "/upload",
 			Fm:     new(frontMatter),
+			DriveFiles: files,
 		}))
 	})
 
@@ -323,10 +366,20 @@ func (s *server) startHttpServer(port string) {
 			serverError("error getting existing post: %s", w, err)
 			return
 		}
+		upload := req.URL.Query().Get("upload")
+		var files []*drive.File
+		if s.drive != nil && len(upload) == 0 {
+			files, err = s.drive.ListFiles()
+			if err != nil {
+				serverError("error getting drive files: %s", w, err)
+				return
+			}
+		}
 		serverError("error executing template", w, input.Execute(w, &InputForm{
 			Action: "/replace",
 			Fm:     post.frontMatter,
 			Postname: postname,
+			DriveFiles: files,
 		}))
 	})
 
