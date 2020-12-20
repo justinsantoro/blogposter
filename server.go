@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"google.golang.org/api/drive/v3"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -52,6 +53,7 @@ type InputForm struct {
 	Action string
 	Fm *frontMatter
 	Postname string
+	driveFiles []*drive.File
 }
 
 type ServerConfig struct {
@@ -75,6 +77,8 @@ type ServerConfig struct {
 	BaseUrl string `json:"baseurl"`
 	//Remote url to git repository
 	RemoteUrl string `json:"remoteurl"`
+	//Path to google api auth config
+	GAPIConfig string `json:"gapiconfig"`
 }
 
 type postpushfunc func() error
@@ -99,6 +103,7 @@ type server struct {
 	hugo    *HugoRepo
 	config  *ServerConfig
 	PostPush postpushfunc
+	drive *GDriveClient
 }
 
 func NewServer(config *ServerConfig) *server {
@@ -111,6 +116,13 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 	}
 
 	var err error
+	//create google drive api client
+	if len(s.config.GAPIConfig) > 0 {
+		s.drive, err = NewGDriveCli(ctx, s.config.GAPIConfig)
+		if err != nil {
+			return nil, errors.New("error creating google drive api client: " + err.Error())
+		}
+	}
 
 	//start servers
 	//initialize repo
@@ -142,6 +154,7 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 	if err != nil {
 		return nil, errors.New("error starting hugo test server: " + err.Error())
 	}
+
 	//start cms webserver
 	go s.startHttpServer(s.config.Port)
 	return hugoErr, nil
