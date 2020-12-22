@@ -55,7 +55,6 @@ func NewGDriveCli(ctx context.Context, configFile string) (*GDriveClient, error)
 		return nil, err
 	}
 	config.Scopes = []string{drive.DriveScope}
-	fmt.Printf("%s\n", config.PrivateKey)
 	client := config.Client(ctx)
 	service, err := drive.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
