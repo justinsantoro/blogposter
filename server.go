@@ -197,6 +197,16 @@ func serverError(msgTemplate string, w http.ResponseWriter, err error) bool {
 	return false
 }
 
+func PostnameFromURL(url string) string {
+	//drop trailing forwardslash
+	if url[len(url)-1] == '/' {
+		url = url[:len(url)-1]
+	}
+	urlparts := strings.Split(url, "/")
+	//drop off querystring
+	return strings.Split(urlparts[len(urlparts)-1], "?")[0]
+}
+
 func (s *server) startHttpServer(port string) {
 
 	http.HandleFunc("/upload", func(w http.ResponseWriter, req *http.Request) {
@@ -421,9 +431,7 @@ func (s *server) startHttpServer(port string) {
 				return err
 			}
 			//if this is a post
-			urlparts := strings.Split(string(url.String()[:len(url.String())-1]), "/")
-			//drop off querystring
-			postname := strings.Split(urlparts[len(urlparts)-2], "?")[0]
+			postname := PostnameFromURL(url.String())
 			editLink := "/edit?post=" + postname
 			if s.hugo.onDeck != nil {
 				if postname == s.hugo.onDeck.name {
