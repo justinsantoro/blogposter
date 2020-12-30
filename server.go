@@ -198,13 +198,15 @@ func serverError(msgTemplate string, w http.ResponseWriter, err error) bool {
 }
 
 func PostnameFromURL(url string) string {
+	//drop off querystring
+	url = strings.Split(url, "?")[0]
 	//drop trailing forwardslash
 	if url[len(url)-1] == '/' {
 		url = url[:len(url)-1]
 	}
 	urlparts := strings.Split(url, "/")
 	//drop off querystring
-	return strings.Split(urlparts[len(urlparts)-1], "?")[0]
+	return urlparts[len(urlparts)-1]
 }
 
 func (s *server) startHttpServer(port string) {
