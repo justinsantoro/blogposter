@@ -22,6 +22,7 @@ import (
 
 var PandocLoc = "pandoc"
 var r = regexp.MustCompile("[^a-zA-Z0-9\\s]+")
+var lbrk = regexp.MustCompile("\\\\\n")
 
 //GetDocContent takes path to file assumed to be
 //a docx file to be converted to commonmark via
@@ -47,6 +48,8 @@ func getDocContent(c io.Reader) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte("&lt;"), []byte{'<'})
 	//undo pandoc escaping of horizontal line rules
 	b = bytes.ReplaceAll(b, []byte("\\---"), []byte("---"))
+	//undo pandoc escaping of markdown line breaks
+	b = lbrk.ReplaceAll(b, []byte(""))
 
 	return b, nil
 }
