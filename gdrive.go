@@ -84,7 +84,7 @@ func (g *GDriveClient) ListFiles() ([]*drive.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	pprint(files)
+	//pprint(files)
 	return minusFolders(files.Files), nil
 }
 
