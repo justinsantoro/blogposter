@@ -21,6 +21,7 @@ import (
 )
 
 var posturlregxp = regexp.MustCompile(`(?m)\/post\/[a-zA-Z0-9]+`)
+var assetextregexp = regexp.MustCompile(`(?m)(?:(?:.png)|(?:.css)|(?:.js))`)
 
 var input = template.Must(template.New("input").Parse(`<!DOCTYPE html>
 <html lang="en">
@@ -406,61 +407,45 @@ func (s *server) startHttpServer(port string) {
 		}
 		//get original request url
 		url := response.Request.URL
-
-		//if url == basepath then this is returning homepage, add the "new post button"
 		log.Println("requested url: ", url.String())
-		if url.String() == "http://localhost:1313/" {
-			log.Println("injecting html into response")
+
+		//if this is not an asset request
+		if !assetextregexp.MatchString(url.String()) {
 			doc, err := goquery.NewDocumentFromReader(response.Body)
 			if err != nil {
 				return err
 			}
-			doc.Find("#navMenu").AppendHtml(`<li class="theme-switch-item">
+			doc.Find("#navSubscribeBtn").AppendHtml(`
             <a href="/new" title="New Post">
                 <i class="fa fa-file fa-fw" aria-hidden="true"></i>
-            </a>
-        </li>`)
-			html, err := doc.Html()
-			if err != nil {
-				return err
-			}
-			response.Body = ioutil.NopCloser(strings.NewReader(html))
-			response.Header["Content-Length"] = []string{fmt.Sprint(len(html))}
-		}
-		if posturlregxp.MatchString(url.String()) {
-			doc, err := goquery.NewDocumentFromReader(response.Body)
-			if err != nil {
-				return err
-			}
-			//if this is a post
-			postname := PostnameFromURL(url.String())
-			editLink := "/edit?post=" + postname
-			if s.hugo.onDeck != nil {
-				if postname == s.hugo.onDeck.name {
-					//change edit link to back button (retains selected document)
-					//if redirected directly from new or edit page
-					if len(response.Request.URL.Query().Get("redirected")) > 0 {
-						editLink = "javascript:history.back()"
-					}
-					//inject abort / publish buttons
-					doc.Find("#navMenu").AppendHtml(`<li class="theme-switch-item">
+            </a>`)
+
+			//if this is a request for a specific post
+			if posturlregxp.MatchString(url.String()) {
+				postname := PostnameFromURL(url.String())
+				editLink := "/edit?post=" + postname
+				if s.hugo.onDeck != nil {
+					if postname == s.hugo.onDeck.name {
+						//change edit link to back button (retains selected document)
+						//if redirected directly from new or edit page
+						if len(response.Request.URL.Query().Get("redirected")) > 0 {
+							editLink = "javascript:history.back()"
+						}
+						//inject abort / publish buttons
+						doc.Find("h1").AppendHtml(`
             <a href="/publish" title="Publish Post">
                 <i class="fa fa-paper-plane fa-fw" aria-hidden="true"></i>
             </a>
-        	</li>
-			<li class="theme-switch-item">
             <a href="/abort" title="Abort Publish">
                 <i class="fa fa-ban fa-fw" aria-hidden="true"></i>
-            </a>
-        	</li>`)
+            </a>`)
+					}
 				}
-			}
-			//inject edit button on all posts
-			doc.Find("#navMenu").AppendHtml(fmt.Sprintf(`<li class="theme-switch-item">
+				doc.Find("h1").AppendHtml(fmt.Sprintf(`
             <a href="%s" title="Edit Post">
                 <i class="fa fa-edit fa-fw"></i>
-            </a>
-        	</li>`, editLink))
+			</a>`, editLink))
+			}
 			html, err := doc.Html()
 			if err != nil {
 				return err
