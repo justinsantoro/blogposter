@@ -23,6 +23,12 @@ import (
 var PandocLoc = "pandoc"
 var r = regexp.MustCompile("[^a-zA-Z0-9\\s]+")
 var lbrk = regexp.MustCompile("\\\\\n")
+var listblkqtreplace = "  -"
+var listblkqt = regexp.MustCompile(`\s\s-\s>`)
+var numlistblkqtreplace = "1."
+var numlistblkqt = regexp.MustCompile(`\d{1,3}\.\s{1,2}>`)
+var listblkqtconinuedreplace = ""
+var listblkqtcontinued = regexp.MustCompile(`\s\s\s\s>\s`)
 
 //GetDocContent takes path to file assumed to be
 //a docx file to be converted to commonmark via
@@ -50,6 +56,12 @@ func getDocContent(c io.Reader) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte("\\---"), []byte("---"))
 	//undo pandoc escaping of markdown line breaks
 	b = lbrk.ReplaceAll(b, []byte(""))
+	//undo pandoc making bulleted list items blockquotes
+	b = listblkqt.ReplaceAll(b, []byte(listblkqtreplace))
+	//undo pandoc making number list items blockquotes
+	b = numlistblkqt.ReplaceAll(b, []byte(numlistblkqtreplace))
+	//replace all list block quote line continuations
+	b = listblkqtcontinued.ReplaceAll(b, []byte(listblkqtconinuedreplace))
 
 	return b, nil
 }
