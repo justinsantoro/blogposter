@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -51,14 +48,6 @@ func main() {
 
 	server := NewServer(conf)
 	server.PostPush = func() error {
-		var cli = http.DefaultClient
-		resp, err := cli.Get("https://api.render.com/deploy/srv-buq9jcoti7j1rauj0th0?key=TqVqN6fk51A")
-		if err != nil {
-			return errors.New("error triggering deploy: " + err.Error())
-		}
-		if resp.StatusCode != http.StatusOK {
-			return errors.New(fmt.Sprintf("deploy hook retuned non-successful status code: %d - %s", resp.StatusCode, resp.Body))
-		}
 		return nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
