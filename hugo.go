@@ -229,6 +229,11 @@ func (h *HugoRepo) stageChange(post *post) error {
 		return errors.New("worktree: " + err.Error())
 	}
 
+	//pull down any changes on remote
+	if err = wt.Pull(&git.PullOptions{RemoteName:"origin"}); err != nil {
+		return errors.New("git pull: " + err.Error())
+	}
+
 	fname := post.Fname()
 	b, err := post.Bytes()
 	if err != nil {
