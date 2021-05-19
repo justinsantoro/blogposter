@@ -231,7 +231,9 @@ func (h *HugoRepo) stageChange(post *post) error {
 
 	//pull down any changes on remote
 	if err = wt.Pull(&git.PullOptions{RemoteName:"origin"}); err != nil {
-		return errors.New("git pull: " + err.Error())
+		if err != git.NoErrAlreadyUpToDate {
+			return errors.New("git pull: " + err.Error())
+		}
 	}
 
 	fname := post.Fname()
