@@ -62,6 +62,8 @@ func getDocContent(c io.Reader) ([]byte, error) {
 	b = numlistblkqt.ReplaceAll(b, []byte(numlistblkqtreplace))
 	//replace all list block quote line continuations
 	b = listblkqtcontinued.ReplaceAll(b, []byte(listblkqtconinuedreplace))
+	//undo pandoc escaping of backticks
+	b = bytes.ReplaceAll(b, []byte("\\`"), []byte("`"))
 
 	return b, nil
 }
