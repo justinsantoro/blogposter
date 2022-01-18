@@ -74,6 +74,7 @@ type frontMatter struct {
 	Date        time.Time `json:"date"`
 	Summary string    `json:"summary,omitempty"`
 	Tags        []string  `json:"tags,omitemtpy"`
+	Img string `json:"Img,omitempty"`
 }
 
 func (fm *frontMatter) Json() ([]byte, error) {
