@@ -1,6 +1,8 @@
 .idea
 *.exe
-*.json
+conf.json
+prod.json
+*drive.json
 blogposter
 smalltownkitten-analytics
 stkanalytics
