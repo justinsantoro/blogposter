@@ -6,3 +6,4 @@ prod.json
 blogposter
 smalltownkitten-analytics
 stkanalytics
+*.env
