@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"google.golang.org/api/drive/v3"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -18,6 +16,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"google.golang.org/api/drive/v3"
 )
 
 var posturlregxp = regexp.MustCompile(`(?m)\/post\/[a-zA-Z0-9]+`)
@@ -62,9 +63,9 @@ var input = template.Must(template.New("input").Parse(`<!DOCTYPE html>
 </html>`))
 
 type InputForm struct {
-	Action string
-	Fm *frontMatter
-	Postname string
+	Action     string
+	Fm         *frontMatter
+	Postname   string
 	DriveFiles []*drive.File
 }
 
@@ -100,8 +101,8 @@ type ServerConfig struct {
 	BaseUrl string `json:"baseurl"`
 	//Remote url to git repository
 	RemoteUrl string `json:"remoteurl"`
-	//Path to google api auth config
-	GAPIConfig string `json:"gapiconfig"`
+	//google api config for drive integration
+	GAPI *GAPIConfig
 }
 
 type postpushfunc func() error
@@ -122,11 +123,11 @@ func ReadServerConfig(fpath string) (*ServerConfig, error) {
 }
 
 type server struct {
-	stopped chan struct{}
-	hugo    *HugoRepo
-	config  *ServerConfig
+	stopped  chan struct{}
+	hugo     *HugoRepo
+	config   *ServerConfig
 	PostPush postpushfunc
-	drive *GDriveClient
+	drive    *GDriveClient
 }
 
 func NewServer(config *ServerConfig) *server {
@@ -140,8 +141,8 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 
 	var err error
 	//create google drive api client
-	if len(s.config.GAPIConfig) > 0 {
-		s.drive, err = NewGDriveCli(ctx, s.config.GAPIConfig)
+	if len(s.config.GAPI.PrivateKeyID) > 0 {
+		s.drive, err = NewGDriveCli(ctx, s.config.GAPI)
 		if err != nil {
 			return nil, errors.New("error creating google drive api client: " + err.Error())
 		}
@@ -151,10 +152,14 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 	//initialize repo
 
 	//check if repo exists first, if not: clone it
-	ok, err := func () (bool, error) {
+	ok, err := func() (bool, error) {
 		_, err := os.Stat(s.config.Path)
-		if err == nil { return true, nil }
-		if os.IsNotExist(err) { return false, nil }
+		if err == nil {
+			return true, nil
+		}
+		if os.IsNotExist(err) {
+			return false, nil
+		}
 		return false, err
 	}()
 	if err != nil {
@@ -362,8 +367,8 @@ func (s *server) startHttpServer(port string) {
 			}
 		}
 		serverError("error executing template", w, input.Execute(w, &InputForm{
-			Action: "/upload",
-			Fm:     new(frontMatter),
+			Action:     "/upload",
+			Fm:         new(frontMatter),
 			DriveFiles: files,
 		}))
 	})
@@ -389,16 +394,16 @@ func (s *server) startHttpServer(port string) {
 			}
 		}
 		serverError("error executing template", w, input.Execute(w, &InputForm{
-			Action: "/replace",
-			Fm:     post.frontMatter,
-			Postname: postname,
+			Action:     "/replace",
+			Fm:         post.frontMatter,
+			Postname:   postname,
 			DriveFiles: files,
 		}))
 	})
 
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
 		Scheme: "http",
-		Host: "localhost:1313",
+		Host:   "localhost:1313",
 	})
 	proxy.ModifyResponse = func(response *http.Response) error {
 		response.Header.Set("Access-Control-Allow-Origin", "*")

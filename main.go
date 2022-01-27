@@ -6,47 +6,70 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path"
 	"syscall"
+)
+
+const (
+	// environment varialble keys
+	envKeyConfigAuthor           = "BLOGPOSTER_AUTHOR"
+	envKeyConfigPort             = "BLOGPOSTER_PORT"
+	envKeyConfigPath             = "BLOGPOSTER_PATH"
+	envKeyConfigUsername         = "BLOGPOSTER_USERNAME"
+	envKeyConfigToken            = "BLOGPOSTER_USERNAME"
+	envKeyConfigTest             = "BLOGPOSTER_TEST"
+	envKeyConfigName             = "BLOGPOSTER_NAME"
+	envKeyConfigEmail            = "BLOGPOSTER_EMAIL"
+	envKeyConfigBaseURL          = "BLOGPOSTER_BASEURL"
+	envKeyConfigRemoteURL        = "BLOGPOSTER_REMOTEURL"
+	envKeyConfigGAPIPrivateKey   = "GAPI_PRIVATE_KEY"
+	envKeyConfigGAPIPrivateKeyID = "GAPI_PRIVATE_KEY_ID"
+	envKeyConfigGAPIEmail        = "GAPI_EMAIL"
+	envKeyConfigGAPITokenURL     = "GAPI_TOKEN_URL"
 )
 
 func main() {
 	//log to stdout
 	log.SetOutput(os.Stdout)
 
-	usrDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal("error getting user home dir: ", err)
-	}
-	configFile := path.Join(usrDir, "blogposter/config.json")
-
 	test := flag.Bool("t", false, "enable test mode (no push)")
-	config := flag.String("config", "", "path to config file (default: $HOME/blogposter/config.json)")
 	baseurl := flag.String("BaseURL", "", "hugo server baseurl http://localhost:8080")
-	port := flag.String ("p", "", "port for http server")
+	port := flag.String("p", "", "port for http server")
 	flag.Parse()
 
-	if len(*config) > 0 {
-		configFile = *config
+	conf := ServerConfig{
+		Author:    os.Getenv(envKeyConfigAuthor),
+		Port:      os.Getenv(envKeyConfigPort),
+		Path:      os.Getenv(envKeyConfigPath),
+		Username:  os.Getenv(envKeyConfigUsername),
+		Token:     os.Getenv(envKeyConfigToken),
+		Name:      os.Getenv(envKeyConfigName),
+		Email:     os.Getenv(envKeyConfigEmail),
+		BaseUrl:   os.Getenv(envKeyConfigAuthor),
+		RemoteUrl: os.Getenv(envKeyConfigBaseURL),
+		GAPI: &GAPIConfig{
+			PrivateKeyID: os.Getenv(envKeyConfigGAPIPrivateKeyID),
+			PrivateKey:   os.Getenv(envKeyConfigGAPIPrivateKey),
+			Email:        os.Getenv(envKeyConfigGAPIEmail),
+			TokenURL:     os.Getenv(envKeyConfigGAPITokenURL),
+		},
 	}
-
-	conf, err := ReadServerConfig(configFile)
-	if err != nil {
-		log.Fatal("error reading config file: ", err)
+	if test, ok := os.LookupEnv(envKeyConfigTest); ok {
+		if test != "0" {
+			conf.Test = true
+		}
 	}
-
 	//override conf with set cmdline flag values
-	if (*test) {
+	if *test {
 		conf.Test = *test
 	}
-	if (len(*baseurl) > 0) {
+	if len(*baseurl) > 0 {
 		conf.BaseUrl = *baseurl
 	}
-	if (len(*port) > 0) {
+	if len(*port) > 0 {
 		conf.Port = *port
 	}
 
-	server := NewServer(conf)
+	server := NewServer(&conf)
 	server.PostPush = func() error {
 		return nil
 	}
@@ -58,7 +81,7 @@ func main() {
 
 	//wait for SIGINT
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	log.Println("waiting")
 
 	select {

@@ -6,19 +6,28 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/option"
 	"io"
 	"log"
 
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/option"
+
 	//"golang.org/x/oauth2"
 	//"golang.org/x/oauth2/google"
-	"golang.org/x/oauth2/jwt"
 	"io/ioutil"
+
+	"golang.org/x/oauth2/jwt"
 )
 
 const docxMIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 const folderMIME = "application/vnd.google-apps.folder"
+
+type GAPIConfig struct {
+	PrivateKeyID string
+	PrivateKey   string
+	Email        string
+	TokenURL     string
+}
 
 type gmarshaler interface {
 	MarshalJSON() ([]byte, error)
@@ -44,16 +53,13 @@ type GDriveClient struct {
 	*drive.Service
 }
 
-func NewGDriveCli(ctx context.Context, configFile string) (*GDriveClient, error) {
-	b, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		return nil, err
-	}
+func NewGDriveCli(ctx context.Context, gapiconfig *GAPIConfig) (*GDriveClient, error) {
+
 	config := new(jwt.Config)
-	err = json.Unmarshal(b, config)
-	if err != nil {
-		return nil, err
-	}
+	config.PrivateKeyID = gapiconfig.PrivateKeyID
+	config.PrivateKey = []byte(gapiconfig.PrivateKey)
+	config.Email = gapiconfig.Email
+	config.TokenURL = gapiconfig.TokenURL
 	config.Scopes = []string{drive.DriveScope}
 	client := config.Client(ctx)
 	service, err := drive.NewService(ctx, option.WithHTTPClient(client))

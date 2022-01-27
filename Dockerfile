@@ -25,6 +25,8 @@ COPY --from=installer-env ["/opt/microsoft/powershell", "/opt/microsoft/powershe
 
 COPY . /blogposter
 RUN cd /blogposter && go build -o /usr/bin/blogposter
+ENV BLOGPOSTER_PORT=80 \
+    BLOGPOSTER_PATH=/blogrepo
 
 # Define Args and Env needed to create links
 ARG PS_INSTALL_VERSION=7
@@ -37,6 +39,7 @@ ENV PS_INSTALL_FOLDER=/opt/microsoft/powershell/$PS_INSTALL_VERSION \
     # set a fixed location for the Module analysis cache
     PSModuleAnalysisCachePath=/var/cache/microsoft/powershell/PSModuleAnalysisCache/ModuleAnalysisCache \
     POWERSHELL_DISTRIBUTION_CHANNEL=PSDocker-Alpine-3.13
+
 
 # Install dotnet dependencies and ca-certificates
 RUN apk add --no-cache \

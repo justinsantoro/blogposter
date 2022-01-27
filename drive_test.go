@@ -10,13 +10,15 @@ import (
 )
 
 var gdrive *GDriveClient
-var configFile = os.Getenv("GDRIVE_CONFIG")
+var configFile = &GAPIConfig{
+	PrivateKeyID: os.Getenv(envKeyConfigGAPIPrivateKeyID),
+	PrivateKey:   os.Getenv(envKeyConfigGAPIPrivateKey),
+	Email:        os.Getenv(envKeyConfigGAPIEmail),
+	TokenURL:     os.Getenv(envKeyConfigGAPITokenURL),
+}
 var testFileID = "1AJQX6aglI_nWCzK5NK2uqrX9bnbswXVoQEhlgQ3NUCY"
 
 func TestCreateDrive(t *testing.T) {
-	if len(configFile) == 0 {
-		t.Fatal("GDRIVE_CONFIG not set")
-	}
 	g, err := NewGDriveCli(context.Background(), configFile)
 	if err != nil {
 		t.Fatal("error initializing google drive client: ", err)
