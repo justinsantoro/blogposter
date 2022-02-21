@@ -15,7 +15,7 @@ const (
 	envKeyConfigPort             = "BLOGPOSTER_PORT"
 	envKeyConfigPath             = "BLOGPOSTER_PATH"
 	envKeyConfigUsername         = "BLOGPOSTER_USERNAME"
-	envKeyConfigToken            = "BLOGPOSTER_USERNAME"
+	envKeyConfigToken            = "BLOGPOSTER_TOKEN"
 	envKeyConfigTest             = "BLOGPOSTER_TEST"
 	envKeyConfigName             = "BLOGPOSTER_NAME"
 	envKeyConfigEmail            = "BLOGPOSTER_EMAIL"
