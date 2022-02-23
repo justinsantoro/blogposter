@@ -11,23 +11,16 @@ deps:
 
 build:
     FROM +deps
-    COPY main.go server.go hugo.go gdrive.go .
-    RUN go build -o build/blogposter main.go
-    SAVE ARTIFACT build/blogposter /blogposter AS LOCAL build/blogposter
+    COPY main.go server.go hugo.go gdrive.go ./
+    RUN go build -o build/blogposter .
+    SAVE ARTIFACT build/blogposter blogposter AS LOCAL build/blogposter
 
 docker:
+    IMPORT github.com/sarahlehman/smalltownkitten:add-earthfile
     FROM klakegg/hugo:0.83.1-pandoc-ci
-    COPY +build/build/blogposter /usr/bin/blogposter
+    COPY +build/blogposter /usr/bin/blogposter
+    COPY smalltownkitten+build/site ./site
     COPY entrypoint.sh /entrypoint.sh
     ENTRYPOINT ["entrypoint.sh"]
-    
+    SAVE IMAGE stkposter:latest
 
-# add earthfile to smalltown kitten
-# with container build
-# container build builds scss and puts it
-# in static folder
-# add container environment to config with sets flag to use
-# static css in container header.
-# all files minus content and data folder are copied to build as artifacts
-# blogposter container then mounts /blogrepo/content and /blogrepo/data as volumes
-# git sparse checkout is used to clone just the content and data folders in entrypoint on starup

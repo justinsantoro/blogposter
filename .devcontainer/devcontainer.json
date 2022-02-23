@@ -42,7 +42,11 @@
 	"features": {
 		"git": "latest",
 		"golang": "latest",
-		"powershell": "latest"
+		"powershell": "latest",
+		"docker-from-docker": {
+			"version": "latest",
+			"moby": true
+		}
 	},
 	"postAttachCommand": "cd /home/node/smalltownkitten-dev/npm install"
 }
