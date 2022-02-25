@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"io"
 	"io/ioutil"
 	"log"
@@ -16,8 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-git/go-git/v5"
-	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/justinsantoro/blogposter/git"
 )
 
 var PandocLoc = "pandoc"
@@ -69,12 +67,12 @@ func getDocContent(c io.Reader) ([]byte, error) {
 }
 
 type frontMatter struct {
-	Title       string    `json:"title"`
-	Author      string    `json:"author,omitempty"`
-	Date        time.Time `json:"date"`
+	Title   string    `json:"title"`
+	Author  string    `json:"author,omitempty"`
+	Date    time.Time `json:"date"`
 	Summary string    `json:"summary,omitempty"`
-	Tags        []string  `json:"tags,omitemtpy"`
-	Img string `json:"Img,omitempty"`
+	Tags    []string  `json:"tags,omitemtpy"`
+	Img     string    `json:"Img,omitempty"`
 }
 
 func (fm *frontMatter) Json() ([]byte, error) {
@@ -87,7 +85,7 @@ func (fm *frontMatter) TagList() string {
 	if len(fm.Tags) == 0 {
 		return s
 	}
-	for _, t := range fm.Tags{
+	for _, t := range fm.Tags {
 		s = s + " " + t
 	}
 	return s[1:]
@@ -108,17 +106,17 @@ func newPost(c io.Reader, title, tags string, summary string, author string) (*p
 	return &post{
 		content: doc,
 		frontMatter: &frontMatter{
-			Title:       title,
-			Author:      author,
-			Date:        time.Now(),
+			Title:   title,
+			Author:  author,
+			Date:    time.Now(),
 			Summary: summary,
-			Tags:        strings.Split(tags, " "),
+			Tags:    strings.Split(tags, " "),
 		},
 	}, nil
 }
 
 func existingPost(b []byte) (*post, error) {
-	p := &post{frontMatter:new(frontMatter)}
+	p := &post{frontMatter: new(frontMatter)}
 	//split off front matter
 	parts := bytes.SplitAfter(b, []byte{'}'})
 	if len(parts) > 2 {
@@ -154,31 +152,24 @@ func (p *post) Fname() string {
 }
 
 type HugoRepo struct {
-	path   string
+	path    string
 	baseUrl string
-	repo   *git.Repository
-	auth   *githttp.BasicAuth
-	name   string
-	email  string
-	onDeck *OnDeck
-	test bool
+	repo    *git.Repository
+	gituser string
+	gitpass string
+	name    string
+	email   string
+	onDeck  *OnDeck
+	test    bool
 }
 
 type OnDeck struct {
 	name string
-	msg string
-}
-
-func CloneRepo(url string, path string) error {
-	log.Printf("cloning repo from %s to %s\n", url, path)
-	_, err := git.PlainClone(path, false, &git.CloneOptions{
-		URL:               url,
-	})
-	return err
+	msg  string
 }
 
 func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (chan error, error) {
-	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true","--disableLiveReload","--bind", "0.0.0.0", "--baseURL", h.baseUrl)
+	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true", "--disableLiveReload", "--bind", "0.0.0.0", "--baseURL", h.baseUrl)
 	cmd.Dir = h.path
 	err := cmd.Start()
 	if err != nil {
@@ -193,21 +184,19 @@ func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (ch
 	return c, nil
 }
 
-func NewHugoRepo(path, username, token, baseUrl, name, email string) (*HugoRepo, error) {
-	repo, err := git.PlainOpen(path)
+func NewHugoRepo(path, gituser, gitpass, baseUrl, name, email string) (*HugoRepo, error) {
+	repo, err := git.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	return &HugoRepo{
-		path: path,
-		repo: repo,
+		path:    path,
+		repo:    repo,
 		baseUrl: baseUrl,
-		auth: &githttp.BasicAuth{
-			Username: username,
-			Password: token,
-		},
-		name: name,
-		email: email,
+		gituser: gituser,
+		gitpass: gitpass,
+		name:    name,
+		email:   email,
 	}, nil
 }
 
@@ -233,10 +222,8 @@ func (h *HugoRepo) stageChange(post *post) error {
 	}
 
 	//pull down any changes on remote
-	if err = wt.Pull(&git.PullOptions{RemoteName:"origin"}); err != nil {
-		if err != git.NoErrAlreadyUpToDate {
-			return errors.New("git pull: " + err.Error())
-		}
+	if err = git.Pull(h.repo, "origin"); err != nil {
+		return err
 	}
 
 	fname := post.Fname()
@@ -258,7 +245,7 @@ func (h *HugoRepo) stageChange(post *post) error {
 	//set on deck name to just the name of the post file
 	//no extension
 	nparts := strings.Split(fname, "/")
-	name := nparts[len(nparts) -1]
+	name := nparts[len(nparts)-1]
 	name = name[:len(name)-3]
 	h.onDeck = &OnDeck{name: name}
 
@@ -318,22 +305,14 @@ func (h *HugoRepo) Deploy() error {
 	if h.onDeck == nil {
 		return errors.New("went to commit but onDeck is empty")
 	}
-	_, err = wt.Commit(h.onDeck.msg, &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  h.name,
-			Email: h.email,
-			When: time.Now(),
-		},
-	})
-	if err != nil {
+
+	if git.Commit(h.repo, h.onDeck.msg, h.name, h.email) != nil {
 		return errors.New("error committing to repo: " + err.Error())
 	}
 
 	//push to remote
 	if !h.test {
-		return h.repo.PushContext(context.TODO(), &git.PushOptions{
-			Auth: h.auth,
-		})
+		return git.Push(h.repo, h.gituser, h.gitpass)
 	}
 	h.onDeck = nil
 	return nil
@@ -341,17 +320,5 @@ func (h *HugoRepo) Deploy() error {
 
 func (h *HugoRepo) Abort() error {
 	h.onDeck = nil
-	//unstage changes and clean directory
-	head, err := h.repo.Head()
-	if err != nil {
-		return err
-	}
-	wt, err := h.repo.Worktree()
-	if err != nil {
-		return err
-	}
-	return wt.Reset(&git.ResetOptions{
-		Commit: head.Hash(),
-		Mode:   git.HardReset,
-	})
+	return git.ResetHead(h.repo)
 }

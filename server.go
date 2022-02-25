@@ -151,25 +151,9 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 	//start servers
 	//initialize repo
 
-	//check if repo exists first, if not: clone it
-	ok, err := func() (bool, error) {
-		_, err := os.Stat(s.config.Path)
-		if err == nil {
-			return true, nil
-		}
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}()
-	if err != nil {
+	//check if repo exists first
+	if _, err = os.Stat(s.config.Path); err != nil {
 		log.Fatal("error checking for repo dir: ", err)
-	}
-	if !ok {
-		//get the repo
-		if CloneRepo(s.config.RemoteUrl, s.config.Path) != nil {
-			log.Fatal("error cloning repo from remoteurl: ", err)
-		}
 	}
 
 	s.hugo, err = NewHugoRepo(s.config.Path, s.config.Username, s.config.Token, s.config.BaseUrl, s.config.Name, s.config.Email)
