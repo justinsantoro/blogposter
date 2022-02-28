@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/justinsantoro/blogposter/git"
 	"google.golang.org/api/drive/v3"
 )
 
@@ -156,7 +157,7 @@ func (s *server) Start(ctx context.Context) (chan error, error) {
 		log.Fatal("error checking for repo dir: ", err)
 	}
 
-	s.hugo, err = NewHugoRepo(s.config.Path, s.config.Username, s.config.Token, s.config.BaseUrl, s.config.Name, s.config.Email)
+	s.hugo, err = NewHugoRepo(s.config.Path, &git.RepoHandler{})
 	if err != nil {
 		return nil, errors.New("error initializing repo: " + err.Error())
 	}

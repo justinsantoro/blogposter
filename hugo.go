@@ -7,15 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os/exec"
-	"path"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/justinsantoro/blogposter/git"
 )
 
 var PandocLoc = "pandoc"
@@ -152,15 +148,11 @@ func (p *post) Fname() string {
 }
 
 type HugoRepo struct {
-	path    string
-	baseUrl string
-	repo    *git.Repository
-	gituser string
-	gitpass string
-	name    string
-	email   string
-	onDeck  *OnDeck
-	test    bool
+	baseUrl  string
+	repo     RepoHandler
+	onDeck   *OnDeck
+	test     bool
+	siteRoot string
 }
 
 type OnDeck struct {
@@ -170,7 +162,7 @@ type OnDeck struct {
 
 func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (chan error, error) {
 	cmd := exec.CommandContext(ctx, "hugo", "server", "--watch=true", "--disableLiveReload", "--bind", "0.0.0.0", "--baseURL", h.baseUrl)
-	cmd.Dir = h.path
+	cmd.Dir = h.siteRoot
 	err := cmd.Start()
 	if err != nil {
 		return nil, err
@@ -184,67 +176,32 @@ func (h *HugoRepo) StartServer(ctx context.Context, stopped chan<- struct{}) (ch
 	return c, nil
 }
 
-func NewHugoRepo(path, gituser, gitpass, baseUrl, name, email string) (*HugoRepo, error) {
-	repo, err := git.Open(path)
-	if err != nil {
-		return nil, err
-	}
+func NewHugoRepo(baseUrl string, rh RepoHandler) (*HugoRepo, error) {
 	return &HugoRepo{
-		path:    path,
-		repo:    repo,
+		repo:    rh,
 		baseUrl: baseUrl,
-		gituser: gituser,
-		gitpass: gitpass,
-		name:    name,
-		email:   email,
 	}, nil
 }
 
-func (h *HugoRepo) writeFile(fname string, b []byte) error {
-	return ioutil.WriteFile(path.Join(h.path, fname), b, 0644)
-}
-
-func (h *HugoRepo) readFile(fname string) ([]byte, error) {
-	return ioutil.ReadFile(path.Join(h.path, fname))
-}
-
 func (h *HugoRepo) stageChange(post *post) error {
-	//reset in case there are any lingering changes
-	err := h.Abort()
-	if err != nil {
-		return errors.New("abort: " + err.Error())
-	}
-
-	//get work tree
-	wt, err := h.repo.Worktree()
-	if err != nil {
-		return errors.New("worktree: " + err.Error())
-	}
 
 	//pull down any changes on remote
-	if err = git.Pull(h.repo, "origin"); err != nil {
+	if err := h.repo.Pull(); err != nil {
 		return err
 	}
 
-	fname := post.Fname()
 	b, err := post.Bytes()
 	if err != nil {
 		return errors.New("PostBytes: " + err.Error())
 	}
-	err = h.writeFile(fname, b)
-	if err != nil {
-		return err
-	}
-
-	//stage changes
-	_, err = wt.Add(fname)
+	err = h.repo.WriteFile(post.Fname(), b)
 	if err != nil {
 		return err
 	}
 
 	//set on deck name to just the name of the post file
 	//no extension
-	nparts := strings.Split(fname, "/")
+	nparts := strings.Split(post.Fname(), "/")
 	name := nparts[len(nparts)-1]
 	name = name[:len(name)-3]
 	h.onDeck = &OnDeck{name: name}
@@ -264,7 +221,7 @@ func (h *HugoRepo) New(c io.Reader, title, tags, summary, author string) error {
 
 func (h *HugoRepo) GetPost(name string) (*post, error) {
 	//build file name
-	b, err := h.readFile("content/post/" + name + ".md")
+	b, err := h.repo.ReadFile("content/post/" + name + ".md")
 	if err != nil {
 		return nil, err
 	}
@@ -287,32 +244,19 @@ func (h *HugoRepo) Update(c io.Reader, name, title, tags, summary, author string
 }
 
 func (h *HugoRepo) Deploy() error {
-	wt, err := h.repo.Worktree()
-	if err != nil {
-		return err
-	}
-	//if index is clean return error
-	st, err := wt.Status()
-	if err != nil {
-		return err
-	}
-	if st.IsClean() {
-		h.onDeck = nil
-		return errors.New("index is clean")
-	}
 
 	//add commit
 	if h.onDeck == nil {
 		return errors.New("went to commit but onDeck is empty")
 	}
 
-	if git.Commit(h.repo, h.onDeck.msg, h.name, h.email) != nil {
+	if err := h.repo.Commit("content/post/"+h.onDeck.name, h.onDeck.msg); err != nil {
 		return errors.New("error committing to repo: " + err.Error())
 	}
 
 	//push to remote
 	if !h.test {
-		return git.Push(h.repo, h.gituser, h.gitpass)
+		return h.repo.Push()
 	}
 	h.onDeck = nil
 	return nil
@@ -320,5 +264,5 @@ func (h *HugoRepo) Deploy() error {
 
 func (h *HugoRepo) Abort() error {
 	h.onDeck = nil
-	return git.ResetHead(h.repo)
+	return h.repo.Clean(true)
 }

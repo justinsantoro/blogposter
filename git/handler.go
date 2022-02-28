@@ -1,11 +1,16 @@
 package git
 
-import "fmt"
+import (
+	"fmt"
+	"io/fs"
+	"io/ioutil"
+)
 
 //RepoHandler implements blogposter.RepoHandler interface
 type RepoHandler struct {
 	r    *Repository
 	opts RepoHandlerOpts
+	path string
 }
 
 type RepoHandlerOpts struct {
@@ -21,7 +26,7 @@ func NewRepoHandler(path string, opts RepoHandlerOpts) (*RepoHandler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RepoHandler{r: r, opts: opts}, nil
+	return &RepoHandler{r: r, opts: opts, path: path}, nil
 }
 
 //Push git pushes changes to remote
@@ -49,5 +54,20 @@ func (rh *RepoHandler) Commit(path string, msg string) error {
 	if err != nil {
 		return fmt.Errorf("error adding %s to git: %v", path, err)
 	}
-	return Commit(rh.r, msg, rh.opts.AuthorName, rh.opts.AuthorEmail)
+	if err = Commit(rh.r, msg, rh.opts.AuthorName, rh.opts.AuthorEmail); err != nil {
+		//unstage changes
+		if err2 := ResetHead(rh.r); err2 != nil {
+			return fmt.Errorf("error unstaging changes while recovering from commit error: %v:\n\t%v", err, err2)
+		}
+		return err
+	}
+	return nil
+}
+
+func (rh *RepoHandler) WriteFile(filename string, data []byte) error {
+	return ioutil.WriteFile(rh.path + "/" + filename, data, fs.ModePerm)
+}
+
+func (rh *RepoHandler) ReadFile(filename string) ([]byte, error) {
+	return ioutil.ReadFile(filename)
 }
